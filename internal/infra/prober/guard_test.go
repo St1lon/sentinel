@@ -46,7 +46,6 @@ func TestGuard_CheckURL_RejectsLiteralPrivateAddresses(t *testing.T) {
 
 	guard := prober.NewGuard(false)
 
-	// Каждый из этих адресов — типовая цель SSRF-атаки.
 	for _, target := range []string{
 		"http://127.0.0.1:8080/",
 		"http://localhost.localdomain/", // имя не резолвится здесь, проверка на этапе соединения
@@ -62,7 +61,6 @@ func TestGuard_CheckURL_RejectsLiteralPrivateAddresses(t *testing.T) {
 		_, err := guard.CheckURL(target)
 
 		if target == "http://localhost.localdomain/" {
-			// Имя проверяется хуком диалера, а не разбором URL.
 			continue
 		}
 
@@ -90,7 +88,6 @@ func TestGuard_CheckURL_AllowsPublicAddresses(t *testing.T) {
 func TestGuard_AllowPrivatePermitsLoopback(t *testing.T) {
 	t.Parallel()
 
-	// Режим для локальной разработки: конфигурация запрещает его в production.
 	parsed, err := prober.NewGuard(true).CheckURL("http://127.0.0.1:8080/healthz")
 	require.NoError(t, err)
 	require.Equal(t, "127.0.0.1:8080", parsed.Host)
@@ -106,15 +103,12 @@ func TestGuard_CheckDialAddress(t *testing.T) {
 	require.ErrorIs(t, guard.CheckDialAddress("[::1]:443"), domain.ErrTargetNotAllowed)
 	require.NoError(t, guard.CheckDialAddress("93.184.216.34:443"))
 
-	// Некорректный адрес тоже не пропускаем — лучше отказать, чем пустить.
 	require.ErrorIs(t, guard.CheckDialAddress("not-an-address"), domain.ErrTargetNotAllowed)
 }
 
 func TestGuard_CheckAddr_UnmapsIPv4MappedAddresses(t *testing.T) {
 	t.Parallel()
 
-	// ::ffff:127.0.0.1 — это loopback, записанный как IPv6:
-	// без Unmap() такой адрес проскочил бы мимо списка запрещённых сетей.
 	addr := netip.MustParseAddr("::ffff:127.0.0.1")
 
 	require.ErrorIs(t, prober.NewGuard(false).CheckAddr(addr), domain.ErrTargetNotAllowed)

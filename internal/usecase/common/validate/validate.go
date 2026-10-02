@@ -1,6 +1,3 @@
-// Package validate содержит правила валидации, общие для нескольких usecase.
-// Вынесено сюда, а не продублировано в create/update, чтобы правило менялось
-// в одном месте; сами Request'ы вызывают эти функции из своих validate().
 package validate
 
 import (
@@ -14,31 +11,20 @@ import (
 )
 
 const (
-	// MinPasswordLength — минимальная длина пароля.
 	MinPasswordLength = 8
-	// MaxPasswordLength — ограничение bcrypt: байты свыше 72 игнорируются,
-	// поэтому длинный пароль лучше отклонить явно, чем молча обрезать.
 	MaxPasswordLength = 72
-	// MaxEmailLength — практический предел длины адреса.
-	MaxEmailLength = 254
+	MaxEmailLength    = 254
 
-	// MinStatusCode и MaxStatusCode — границы ожидаемого HTTP-кода.
 	MinStatusCode = 100
 	MaxStatusCode = 599
 
-	// MaxPageLimit — максимальный размер страницы в списках.
-	MaxPageLimit = 200
-	// DefaultPageLimit — размер страницы по умолчанию.
+	MaxPageLimit     = 200
 	DefaultPageLimit = 50
-	// MaxTimeRange — максимальная глубина выборки статистики.
-	MaxTimeRange = 400 * 24 * time.Hour
+	MaxTimeRange     = 400 * 24 * time.Hour
 )
 
-// allowedMethods — методы, допустимые для HTTP-проверки.
-// Проверка должна быть безопасной и идемпотентной, поэтому ни POST, ни DELETE.
 var allowedMethods = []string{"GET", "HEAD", "OPTIONS"}
 
-// Email проверяет и нормализует адрес.
 func Email(raw string) (string, error) {
 	email := strings.ToLower(strings.TrimSpace(raw))
 
@@ -58,7 +44,6 @@ func Email(raw string) (string, error) {
 	return email, nil
 }
 
-// Password проверяет пароль на минимальные требования.
 func Password(password string) error {
 	if len(password) < MinPasswordLength || len(password) > MaxPasswordLength {
 		return domain.ErrWeakPassword
@@ -67,7 +52,6 @@ func Password(password string) error {
 	return nil
 }
 
-// MonitorName проверяет и нормализует имя монитора.
 func MonitorName(raw string) (string, error) {
 	name := strings.TrimSpace(raw)
 
@@ -78,8 +62,6 @@ func MonitorName(raw string) (string, error) {
 	return name, nil
 }
 
-// MonitorTarget проверяет длину цели. Схема и допустимость адреса проверяются
-// prober'ом (пакет infra/prober), чтобы правило жило в одном месте.
 func MonitorTarget(raw string) (string, error) {
 	target := strings.TrimSpace(raw)
 
@@ -94,7 +76,6 @@ func MonitorTarget(raw string) (string, error) {
 	return target, nil
 }
 
-// MonitorKind проверяет вид проверки и что он реализован в текущей сборке.
 func MonitorKind(raw string) (domain.MonitorKind, error) {
 	kind := domain.MonitorKind(strings.TrimSpace(strings.ToLower(raw)))
 
@@ -109,7 +90,6 @@ func MonitorKind(raw string) (domain.MonitorKind, error) {
 	return kind, nil
 }
 
-// Method проверяет и нормализует HTTP-метод проверки.
 func Method(raw string) (string, error) {
 	method := strings.ToUpper(strings.TrimSpace(raw))
 
@@ -120,8 +100,6 @@ func Method(raw string) (string, error) {
 	return method, nil
 }
 
-// Schedule проверяет интервал и таймаут вместе: таймаут обязан быть строго
-// меньше интервала, иначе проверки будут наезжать друг на друга.
 func Schedule(intervalSeconds, timeoutSeconds int) error {
 	if intervalSeconds < domain.MinIntervalSeconds || intervalSeconds > domain.MaxIntervalSeconds {
 		return domain.ErrInvalidInterval
@@ -138,7 +116,6 @@ func Schedule(intervalSeconds, timeoutSeconds int) error {
 	return nil
 }
 
-// ExpectedStatus проверяет ожидаемый код ответа.
 func ExpectedStatus(code int) error {
 	if code < MinStatusCode || code > MaxStatusCode {
 		return domain.ErrInvalidExpectedStatus
@@ -147,7 +124,6 @@ func ExpectedStatus(code int) error {
 	return nil
 }
 
-// FailureThreshold проверяет порог падений до открытия инцидента.
 func FailureThreshold(threshold int) error {
 	if threshold < domain.MinThreshold || threshold > domain.MaxThreshold {
 		return domain.ErrInvalidThreshold
@@ -156,7 +132,6 @@ func FailureThreshold(threshold int) error {
 	return nil
 }
 
-// Paging проверяет и нормализует параметры страницы.
 func Paging(limit, offset int) (int, int, error) {
 	if limit == 0 {
 		limit = DefaultPageLimit
@@ -169,7 +144,6 @@ func Paging(limit, offset int) (int, int, error) {
 	return limit, offset, nil
 }
 
-// TimeRange проверяет интервал выборки статистики.
 func TimeRange(from, to time.Time) error {
 	if from.IsZero() || to.IsZero() || !from.Before(to) {
 		return domain.ErrInvalidTimeRange
@@ -182,7 +156,6 @@ func TimeRange(from, to time.Time) error {
 	return nil
 }
 
-// UUID проверяет, что строка непуста (формат проверяет БД при приведении к UUID).
 func UUID(id string) bool {
 	return strings.TrimSpace(id) != ""
 }

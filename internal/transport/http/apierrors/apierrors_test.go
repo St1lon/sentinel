@@ -48,7 +48,6 @@ func TestFrom_MapsDomainErrors(t *testing.T) {
 func TestFrom_UnwrapsWrappedErrors(t *testing.T) {
 	t.Parallel()
 
-	// Репозиторий оборачивает ошибки контекстом, маппинг обязан это переживать.
 	wrapped := fmt.Errorf("select monitor: %w", domain.ErrMonitorNotFound)
 
 	apiErr := apierrors.From(wrapped)
@@ -59,8 +58,6 @@ func TestFrom_UnwrapsWrappedErrors(t *testing.T) {
 func TestFrom_UnknownErrorHidesDetails(t *testing.T) {
 	t.Parallel()
 
-	// Внутренняя ошибка не должна раскрывать клиенту устройство сервиса:
-	// подробности уходят в лог, наружу — нейтральное сообщение.
 	apiErr := apierrors.From(errors.New(`pq: relation "monitors" does not exist`))
 
 	require.Equal(t, http.StatusInternalServerError, apiErr.Status)
@@ -72,8 +69,6 @@ func TestFrom_UnknownErrorHidesDetails(t *testing.T) {
 func TestFrom_UserNotFoundLooksLikeUnauthenticated(t *testing.T) {
 	t.Parallel()
 
-	// Токен есть, а пользователя уже нет — это 401, а не 404:
-	// наружу не должно утекать, что аккаунт удалён.
 	apiErr := apierrors.From(domain.ErrUserNotFound)
 	require.Equal(t, http.StatusUnauthorized, apiErr.Status)
 }

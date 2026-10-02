@@ -1,5 +1,3 @@
-// Package cleanupchecks удаляет устаревшие результаты проверок.
-// Запускается одноразовым процессом cmd/cleanup (фактор XII «Admin processes»).
 package cleanupchecks
 
 import (
@@ -9,7 +7,6 @@ import (
 	"github.com/St1lon/sentinel/internal/domain"
 )
 
-// Request — глубина хранения и размер пачки удаления.
 type Request struct {
 	RetentionDays int
 	BatchSize     int
@@ -28,24 +25,19 @@ func (req *Request) validate() error {
 	return nil
 }
 
-// Result — сколько проверок удалено и до какой даты.
 type Result struct {
 	Deleted int64
 	Before  time.Time
 }
 
-// Usecase — очистка устаревших проверок.
 type Usecase struct {
 	checks CheckRepo
 }
 
-// NewUsecase собирает usecase очистки.
 func NewUsecase(checks CheckRepo) *Usecase {
 	return &Usecase{checks: checks}
 }
 
-// Execute удаляет проверки старше retention пачками, пока они не закончатся.
-// Пачками — чтобы не держать долгую блокировку на большой таблице.
 func (uc *Usecase) Execute(ctx context.Context, req *Request) (*Result, error) {
 	if err := req.validate(); err != nil {
 		return nil, err

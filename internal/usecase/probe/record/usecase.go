@@ -1,4 +1,3 @@
-// Package recordprobe фиксирует результат одной проверки монитора.
 package recordprobe
 
 import (
@@ -10,13 +9,11 @@ import (
 	"github.com/St1lon/sentinel/internal/usecase/common"
 )
 
-// Result — что именно изменилось: нужно воркеру для логов и будущих алертов.
 type Result struct {
 	Transition domain.Transition
 	CheckID    int64
 }
 
-// Usecase — запись результата проверки и применение перехода состояния.
 type Usecase struct {
 	monitors  MonitorRepo
 	checks    CheckRepo
@@ -24,16 +21,10 @@ type Usecase struct {
 	tx        common.TxManager
 }
 
-// NewUsecase собирает usecase записи результата проверки.
 func NewUsecase(monitors MonitorRepo, checks CheckRepo, incidents IncidentRepo, tx common.TxManager) *Usecase {
 	return &Usecase{monitors: monitors, checks: checks, incidents: incidents, tx: tx}
 }
 
-// Execute записывает проверку и применяет вычисленный доменом переход.
-//
-// Все четыре записи (проверка, статус монитора, открытие и закрытие инцидента)
-// идут в одной транзакции: иначе падение процесса между ними оставило бы
-// монитор в статусе down без инцидента или наоборот.
 func (uc *Usecase) Execute(ctx context.Context, req *Request) (*Result, error) {
 	if err := req.validate(); err != nil {
 		return nil, err

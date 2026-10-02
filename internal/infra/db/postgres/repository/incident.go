@@ -15,19 +15,14 @@ import (
 
 const incidentColumns = `id, monitor_id, started_at, resolved_at, cause`
 
-// IncidentRepo — репозиторий инцидентов над PostgreSQL.
 type IncidentRepo struct {
 	pool *pgxpool.Pool
 }
 
-// NewIncidentRepo создаёт репозиторий инцидентов.
 func NewIncidentRepo(pool *pgxpool.Pool) *IncidentRepo {
 	return &IncidentRepo{pool: pool}
 }
 
-// Open открывает инцидент. Если открытый инцидент по монитору уже есть,
-// вставка не проходит из-за частичного уникального индекса — это не ошибка,
-// а нормальный исход гонки двух воркеров, поэтому ON CONFLICT DO NOTHING.
 func (r *IncidentRepo) Open(ctx context.Context, incident *domain.Incident) error {
 	const query = `
 		INSERT INTO incidents (id, monitor_id, started_at, cause)
@@ -48,8 +43,6 @@ func (r *IncidentRepo) Open(ctx context.Context, incident *domain.Incident) erro
 	return nil
 }
 
-// ResolveOpen закрывает открытый инцидент монитора.
-// Отсутствие открытого инцидента — не ошибка: воркер мог перезапуститься.
 func (r *IncidentRepo) ResolveOpen(ctx context.Context, monitorID string, resolvedAt time.Time) error {
 	const query = `
 		UPDATE incidents
@@ -63,7 +56,6 @@ func (r *IncidentRepo) ResolveOpen(ctx context.Context, monitorID string, resolv
 	return nil
 }
 
-// GetOpenByMonitor возвращает открытый инцидент монитора, если он есть.
 func (r *IncidentRepo) GetOpenByMonitor(ctx context.Context, monitorID string) (*domain.Incident, error) {
 	query := `SELECT ` + incidentColumns + `
 		FROM incidents
@@ -86,7 +78,6 @@ func (r *IncidentRepo) GetOpenByMonitor(ctx context.Context, monitorID string) (
 	return &incident, nil
 }
 
-// ListByMonitor возвращает историю инцидентов монитора, свежие сверху.
 func (r *IncidentRepo) ListByMonitor(
 	ctx context.Context, monitorID string, limit, offset int,
 ) ([]*domain.Incident, int, error) {
@@ -112,8 +103,6 @@ func (r *IncidentRepo) ListByMonitor(
 	return incidents, total, nil
 }
 
-// ListByMonitors возвращает инциденты сразу по нескольким мониторам —
-// лента инцидентов статус-страницы одним запросом.
 func (r *IncidentRepo) ListByMonitors(
 	ctx context.Context, monitorIDs []string, since time.Time, limit int,
 ) ([]*domain.Incident, error) {

@@ -11,20 +11,14 @@ import (
 	"github.com/St1lon/sentinel/internal/infra/db/postgres"
 )
 
-// CheckRepo — репозиторий результатов проверок над PostgreSQL.
-// Таблица checks растёт линейно по времени и читается только агрегатами,
-// поэтому в Phase 2 этот репозиторий получает альтернативную реализацию
-// на ClickHouse за тем же интерфейсом, объявленным в usecase.
 type CheckRepo struct {
 	pool *pgxpool.Pool
 }
 
-// NewCheckRepo создаёт репозиторий проверок.
 func NewCheckRepo(pool *pgxpool.Pool) *CheckRepo {
 	return &CheckRepo{pool: pool}
 }
 
-// Insert сохраняет результат одной проверки.
 func (r *CheckRepo) Insert(ctx context.Context, check *domain.Check) error {
 	const query = `
 		INSERT INTO checks (monitor_id, checked_at, up, status_code, latency_ms, error)
@@ -45,7 +39,6 @@ func (r *CheckRepo) Insert(ctx context.Context, check *domain.Check) error {
 	return nil
 }
 
-// ListByMonitor возвращает последние проверки монитора за период.
 func (r *CheckRepo) ListByMonitor(
 	ctx context.Context, monitorID string, from, to time.Time, limit int,
 ) ([]*domain.Check, error) {
@@ -85,8 +78,6 @@ func (r *CheckRepo) ListByMonitor(
 	return checks, nil
 }
 
-// Stats считает агрегат по проверкам монитора за период.
-// percentile_disc по latency_ms даёт p95 без вытягивания строк в приложение.
 func (r *CheckRepo) Stats(
 	ctx context.Context, monitorID string, from, to time.Time,
 ) (*domain.MonitorStats, error) {
@@ -117,8 +108,6 @@ func (r *CheckRepo) Stats(
 	return &stats, nil
 }
 
-// Buckets сворачивает проверки монитора в корзины по часам или дням —
-// это запрос для графика аптайма, он не вытягивает сырые строки наружу.
 func (r *CheckRepo) Buckets(
 	ctx context.Context, monitorID string, from, to time.Time, size domain.BucketSize,
 ) ([]*domain.Bucket, error) {
@@ -126,8 +115,6 @@ func (r *CheckRepo) Buckets(
 		return nil, domain.ErrInvalidBucket
 	}
 
-	// size подставляется в текст запроса, поэтому допускаются только значения
-	// из белого списка domain.BucketSize — произвольная строка сюда не попадёт.
 	query := fmt.Sprintf(`
 		SELECT date_trunc('%s', checked_at) AS bucket, count(*), count(*) FILTER (WHERE up)
 		FROM checks
@@ -160,8 +147,6 @@ func (r *CheckRepo) Buckets(
 	return buckets, nil
 }
 
-// BucketsForMonitors сворачивает проверки сразу по нескольким мониторам —
-// один запрос на всю статус-страницу вместо запроса на каждый монитор.
 func (r *CheckRepo) BucketsForMonitors(
 	ctx context.Context, monitorIDs []string, from, to time.Time, size domain.BucketSize,
 ) ([]*domain.Bucket, error) {
@@ -205,8 +190,6 @@ func (r *CheckRepo) BucketsForMonitors(
 	return buckets, nil
 }
 
-// DeleteOlderThan удаляет проверки старше указанного времени пачками.
-// Используется одноразовым административным процессом cleanup.
 func (r *CheckRepo) DeleteOlderThan(ctx context.Context, before time.Time, batchSize int) (int64, error) {
 	const query = `
 		DELETE FROM checks

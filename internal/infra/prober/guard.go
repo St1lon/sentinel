@@ -1,4 +1,3 @@
-// Package prober выполняет исходящие проверки целей мониторинга.
 package prober
 
 import (
@@ -11,14 +10,6 @@ import (
 	"github.com/St1lon/sentinel/internal/domain"
 )
 
-// Сети, запрещённые для исходящих проверок.
-//
-// Сервис по заданию пользователя ходит на произвольный URL, то есть сам по себе
-// является инструментом SSRF: без фильтрации любой зарегистрировавшийся может
-// просканировать внутреннюю сеть или прочитать облачные метаданные
-// (169.254.169.254). Поэтому адреса проверяются дважды: до запроса — после
-// разбора URL, и в момент установки соединения — хуком Control у диалера,
-// что закрывает и DNS rebinding, и редирект на внутренний адрес.
 var blockedPrefixes = []netip.Prefix{
 	netip.MustParsePrefix("0.0.0.0/8"),      // "этот" хост
 	netip.MustParsePrefix("10.0.0.0/8"),     // частная сеть
@@ -40,20 +31,14 @@ var blockedPrefixes = []netip.Prefix{
 	netip.MustParsePrefix("2002::/16"),      // 6to4
 }
 
-// Guard проверяет, что цель мониторинга допустима.
 type Guard struct {
 	allowPrivate bool
 }
 
-// NewGuard создаёт проверяльщик целей.
-// allowPrivate включается только для локальной разработки и e2e-тестов
-// (конфигурация запрещает его при APP_ENV=production).
 func NewGuard(allowPrivate bool) *Guard {
 	return &Guard{allowPrivate: allowPrivate}
 }
 
-// CheckURL разбирает и проверяет URL цели: схему, наличие хоста, отсутствие
-// учётных данных в URL и допустимость адреса, если хост задан литеральным IP.
 func (g *Guard) CheckURL(raw string) (*url.URL, error) {
 	parsed, err := url.Parse(strings.TrimSpace(raw))
 	if err != nil {
@@ -68,7 +53,6 @@ func (g *Guard) CheckURL(raw string) (*url.URL, error) {
 		return nil, fmt.Errorf("%w: host is empty", domain.ErrInvalidTarget)
 	}
 
-	// Учётные данные в URL утекают в логи и в заголовок Authorization — запрещаем.
 	if parsed.User != nil {
 		return nil, fmt.Errorf("%w: credentials in url are not allowed", domain.ErrInvalidTarget)
 	}
@@ -78,7 +62,6 @@ func (g *Guard) CheckURL(raw string) (*url.URL, error) {
 		return nil, fmt.Errorf("%w: host is empty", domain.ErrInvalidTarget)
 	}
 
-	// Если хост — литеральный IP, он проверяется сразу, не дожидаясь соединения.
 	if addr, err := netip.ParseAddr(host); err == nil {
 		if err := g.CheckAddr(addr); err != nil {
 			return nil, err
@@ -88,7 +71,6 @@ func (g *Guard) CheckURL(raw string) (*url.URL, error) {
 	return parsed, nil
 }
 
-// CheckAddr проверяет конкретный IP-адрес по списку запрещённых сетей.
 func (g *Guard) CheckAddr(addr netip.Addr) error {
 	if g.allowPrivate {
 		return nil
@@ -109,9 +91,7 @@ func (g *Guard) CheckAddr(addr netip.Addr) error {
 	return nil
 }
 
-// CheckDialAddress — хук для net.Dialer.Control: вызывается перед установкой
-// соединения с уже разрешённым адресом, поэтому ловит DNS rebinding,
-// когда имя резолвится во внутренний адрес уже после проверки URL.
+// Вызывается перед connect с уже разрезолвленным адресом — закрывает DNS rebinding.
 func (g *Guard) CheckDialAddress(address string) error {
 	host, _, err := net.SplitHostPort(address)
 	if err != nil {

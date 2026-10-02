@@ -10,8 +10,6 @@ CREATE TABLE users (
     CONSTRAINT users_email_not_empty CHECK (length(btrim(email)) > 0)
 );
 
--- Виды проверок заведены enum'ом с запасом: tls_cert и tcp_port добавляются
--- новым prober'ом в коде, без миграции схемы и без изменения контракта API.
 CREATE TYPE monitor_kind AS ENUM ('http', 'tls_cert', 'tcp_port');
 
 CREATE TYPE monitor_status AS ENUM ('pending', 'up', 'down', 'paused');
@@ -47,7 +45,6 @@ CREATE TABLE monitors (
     CONSTRAINT monitors_failures_non_negative CHECK (consecutive_failures >= 0)
 );
 
--- Частичный индекс под запрос воркера: "взять мониторы, которым пора проверяться".
 CREATE INDEX monitors_due_idx ON monitors (next_check_at) WHERE paused = FALSE;
 
 CREATE INDEX monitors_user_created_idx ON monitors (user_id, created_at DESC);
@@ -77,8 +74,7 @@ CREATE TABLE incidents (
     CONSTRAINT incidents_resolved_after_started CHECK (resolved_at IS NULL OR resolved_at >= started_at)
 );
 
--- Инвариант "не больше одного открытого инцидента на монитор" держит БД,
--- а не только код воркера: при гонке двух воркеров вставка просто не пройдёт.
+-- Не больше одного открытого инцидента на монитор.
 CREATE UNIQUE INDEX incidents_single_open_per_monitor
     ON incidents (monitor_id)
     WHERE resolved_at IS NULL;

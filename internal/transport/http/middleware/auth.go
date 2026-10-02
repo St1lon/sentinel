@@ -11,13 +11,10 @@ import (
 
 const bearerPrefix = "Bearer "
 
-// TokenParser — порт проверки access-токена, реализуется infra/auth.
 type TokenParser interface {
 	ParseUserID(token string) (string, error)
 }
 
-// Auth пропускает дальше только запросы с корректным Bearer-токеном
-// и кладёт идентификатор пользователя в контекст.
 func Auth(parser TokenParser) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

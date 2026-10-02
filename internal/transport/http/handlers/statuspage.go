@@ -10,8 +10,6 @@ import (
 	getstatuspage "github.com/St1lon/sentinel/internal/usecase/statuspage/get"
 )
 
-// StatusPage — GET /api/v1/public/status/{slug}.
-// Эндпоинт публичный: авторизация не требуется, доступ даёт знание слага.
 func (h *Handlers) StatusPage(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UTC()
 
@@ -25,8 +23,6 @@ func (h *Handlers) StatusPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Публичная страница кэшируется ненадолго: она читается чаще всего
-	// и не содержит данных, зависящих от читателя.
 	w.Header().Set("Cache-Control", "public, max-age=30")
 
 	h.writeJSON(w, r, http.StatusOK, mapper.StatusPage(

@@ -1,5 +1,3 @@
-// Package mapper переводит доменные структуры в wire-DTO и обратно.
-// Благодаря этому слою изменение схемы БД или домена не ломает контракт API.
 package mapper
 
 import (
@@ -9,7 +7,6 @@ import (
 	"github.com/St1lon/sentinel/internal/transport/http/dto"
 )
 
-// User переводит пользователя в DTO.
 func User(user *domain.User) dto.User {
 	return dto.User{
 		ID:             user.ID,
@@ -19,7 +16,6 @@ func User(user *domain.User) dto.User {
 	}
 }
 
-// Monitor переводит монитор в DTO.
 func Monitor(monitor *domain.Monitor) dto.Monitor {
 	return dto.Monitor{
 		ID:                  monitor.ID,
@@ -42,7 +38,6 @@ func Monitor(monitor *domain.Monitor) dto.Monitor {
 	}
 }
 
-// Monitors переводит список мониторов.
 func Monitors(monitors []*domain.Monitor) []dto.Monitor {
 	items := make([]dto.Monitor, 0, len(monitors))
 
@@ -53,7 +48,6 @@ func Monitors(monitors []*domain.Monitor) []dto.Monitor {
 	return items
 }
 
-// Check переводит результат проверки.
 func Check(check *domain.Check) dto.Check {
 	return dto.Check{
 		ID:         check.ID,
@@ -65,7 +59,6 @@ func Check(check *domain.Check) dto.Check {
 	}
 }
 
-// Checks переводит список проверок.
 func Checks(checks []*domain.Check) []dto.Check {
 	items := make([]dto.Check, 0, len(checks))
 
@@ -76,7 +69,6 @@ func Checks(checks []*domain.Check) []dto.Check {
 	return items
 }
 
-// Buckets переводит корзины графика.
 func Buckets(buckets []*domain.Bucket) []dto.Bucket {
 	items := make([]dto.Bucket, 0, len(buckets))
 
@@ -92,7 +84,6 @@ func Buckets(buckets []*domain.Bucket) []dto.Bucket {
 	return items
 }
 
-// MonitorStats переводит агрегат и корзины.
 func MonitorStats(stats *domain.MonitorStats, buckets []*domain.Bucket) dto.MonitorStats {
 	return dto.MonitorStats{
 		MonitorID:        stats.MonitorID,
@@ -108,7 +99,6 @@ func MonitorStats(stats *domain.MonitorStats, buckets []*domain.Bucket) dto.Moni
 	}
 }
 
-// Incident переводит инцидент.
 func Incident(incident *domain.Incident, now time.Time) dto.Incident {
 	return dto.Incident{
 		ID:              incident.ID,
@@ -121,7 +111,6 @@ func Incident(incident *domain.Incident, now time.Time) dto.Incident {
 	}
 }
 
-// Incidents переводит список инцидентов.
 func Incidents(incidents []*domain.Incident, now time.Time) []dto.Incident {
 	items := make([]dto.Incident, 0, len(incidents))
 

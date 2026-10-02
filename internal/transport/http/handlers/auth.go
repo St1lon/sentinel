@@ -10,7 +10,6 @@ import (
 	registeruser "github.com/St1lon/sentinel/internal/usecase/auth/register"
 )
 
-// Register — POST /api/v1/auth/register.
 func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 	var body dto.RegisterRequest
 
@@ -37,7 +36,6 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Login — POST /api/v1/auth/login.
 func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	var body dto.LoginRequest
 
@@ -64,9 +62,6 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// userID достаёт идентификатор пользователя, положенный middleware.Auth.
-// Если его нет, значит хендлер подключён вне защищённой группы роутера —
-// это ошибка сборки роутера, а не запроса.
 func (h *Handlers) userID(w http.ResponseWriter, r *http.Request) (string, bool) {
 	userID, ok := middleware.UserIDFromRequest(r)
 	if !ok {

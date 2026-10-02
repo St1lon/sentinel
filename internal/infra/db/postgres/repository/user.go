@@ -12,18 +12,14 @@ import (
 	"github.com/St1lon/sentinel/internal/infra/db/postgres"
 )
 
-// UserRepo — репозиторий пользователей над PostgreSQL.
 type UserRepo struct {
 	pool *pgxpool.Pool
 }
 
-// NewUserRepo создаёт репозиторий пользователей.
 func NewUserRepo(pool *pgxpool.Pool) *UserRepo {
 	return &UserRepo{pool: pool}
 }
 
-// Create сохраняет нового пользователя.
-// Нарушение уникальности email транслируется в domain.ErrEmailAlreadyUsed.
 func (r *UserRepo) Create(ctx context.Context, user *domain.User) error {
 	const query = `
 		INSERT INTO users (id, email, password_hash, status_page_slug, created_at)
@@ -47,7 +43,6 @@ func (r *UserRepo) Create(ctx context.Context, user *domain.User) error {
 	return nil
 }
 
-// GetByEmail возвращает пользователя по email.
 func (r *UserRepo) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
 	const query = `
 		SELECT id, email, password_hash, status_page_slug, created_at
@@ -57,7 +52,6 @@ func (r *UserRepo) GetByEmail(ctx context.Context, email string) (*domain.User, 
 	return r.queryOne(ctx, query, email)
 }
 
-// GetByID возвращает пользователя по идентификатору.
 func (r *UserRepo) GetByID(ctx context.Context, id string) (*domain.User, error) {
 	const query = `
 		SELECT id, email, password_hash, status_page_slug, created_at
@@ -67,7 +61,6 @@ func (r *UserRepo) GetByID(ctx context.Context, id string) (*domain.User, error)
 	return r.queryOne(ctx, query, id)
 }
 
-// GetByStatusPageSlug возвращает пользователя по публичному слагу статус-страницы.
 func (r *UserRepo) GetByStatusPageSlug(ctx context.Context, slug string) (*domain.User, error) {
 	const query = `
 		SELECT id, email, password_hash, status_page_slug, created_at

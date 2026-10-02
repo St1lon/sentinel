@@ -1,4 +1,3 @@
-// Package createmonitor реализует создание монитора.
 package createmonitor
 
 import (
@@ -10,18 +9,14 @@ import (
 	"github.com/St1lon/sentinel/internal/domain"
 )
 
-// Usecase — создание монитора.
 type Usecase struct {
 	monitors MonitorRepo
 }
 
-// NewUsecase собирает usecase создания монитора.
 func NewUsecase(monitors MonitorRepo) *Usecase {
 	return &Usecase{monitors: monitors}
 }
 
-// Execute создаёт монитор. next_check_at ставится на «сейчас», поэтому первая
-// проверка выполняется на ближайшем цикле воркера, а не через interval.
 func (uc *Usecase) Execute(ctx context.Context, req *Request) (*domain.Monitor, error) {
 	if err := req.validate(); err != nil {
 		return nil, err

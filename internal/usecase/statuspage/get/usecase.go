@@ -1,4 +1,3 @@
-// Package getstatuspage собирает публичную статус-страницу по слагу.
 package getstatuspage
 
 import (
@@ -10,13 +9,10 @@ import (
 )
 
 const (
-	// defaultWindowDays — глубина графика на статус-странице.
 	defaultWindowDays = 90
-	// maxIncidents — сколько инцидентов показывать в ленте.
-	maxIncidents = 50
+	maxIncidents      = 50
 )
 
-// Request — слаг публичной страницы.
 type Request struct {
 	Slug string
 	Now  time.Time
@@ -34,7 +30,6 @@ func (req *Request) validate() error {
 	return nil
 }
 
-// Result — данные публичной страницы: мониторы, корзины аптайма и лента инцидентов.
 type Result struct {
 	From      time.Time
 	To        time.Time
@@ -43,7 +38,6 @@ type Result struct {
 	Incidents []*domain.Incident
 }
 
-// Usecase — сбор публичной статус-страницы.
 type Usecase struct {
 	users     UserRepo
 	monitors  MonitorRepo
@@ -51,14 +45,10 @@ type Usecase struct {
 	incidents IncidentRepo
 }
 
-// NewUsecase собирает usecase статус-страницы.
 func NewUsecase(users UserRepo, monitors MonitorRepo, checks CheckRepo, incidents IncidentRepo) *Usecase {
 	return &Usecase{users: users, monitors: monitors, checks: checks, incidents: incidents}
 }
 
-// Execute возвращает данные публичной страницы.
-// Корзины и инциденты читаются одним запросом на все мониторы, а не запросом
-// на каждый: страница публичная и должна выдерживать нагрузку.
 func (uc *Usecase) Execute(ctx context.Context, req *Request) (*Result, error) {
 	if err := req.validate(); err != nil {
 		return nil, err

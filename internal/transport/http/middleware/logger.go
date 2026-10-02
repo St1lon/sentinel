@@ -8,8 +8,6 @@ import (
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 )
 
-// Logger пишет по одной структурированной записи на запрос в stdout.
-// Логи — поток событий (фактор XI): ни файлов, ни ротации внутри приложения.
 func Logger(logger *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

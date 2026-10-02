@@ -13,34 +13,26 @@ import (
 	"github.com/St1lon/sentinel/internal/infra/db/postgres"
 )
 
-// monitorColumns — единый список колонок для всех SELECT'ов, чтобы порядок
-// сканирования совпадал в каждом запросе.
 const monitorColumns = `
 	id, user_id, name, kind, target, method,
 	interval_seconds, timeout_seconds, expected_status, failure_threshold,
 	is_public, paused, status, consecutive_failures,
 	last_checked_at, next_check_at, created_at, updated_at`
 
-// monitorColumnsQualified — тот же список с префиксом таблицы. Нужен там, где
-// в запросе участвует не только monitors (например, UPDATE ... FROM due):
-// без префикса ссылка на id неоднозначна и запрос падает с SQLSTATE 42702.
 const monitorColumnsQualified = `
 	m.id, m.user_id, m.name, m.kind, m.target, m.method,
 	m.interval_seconds, m.timeout_seconds, m.expected_status, m.failure_threshold,
 	m.is_public, m.paused, m.status, m.consecutive_failures,
 	m.last_checked_at, m.next_check_at, m.created_at, m.updated_at`
 
-// MonitorRepo — репозиторий мониторов над PostgreSQL.
 type MonitorRepo struct {
 	pool *pgxpool.Pool
 }
 
-// NewMonitorRepo создаёт репозиторий мониторов.
 func NewMonitorRepo(pool *pgxpool.Pool) *MonitorRepo {
 	return &MonitorRepo{pool: pool}
 }
 
-// Create сохраняет монитор.
 func (r *MonitorRepo) Create(ctx context.Context, monitor *domain.Monitor) error {
 	const query = `
 		INSERT INTO monitors (
@@ -68,9 +60,6 @@ func (r *MonitorRepo) Create(ctx context.Context, monitor *domain.Monitor) error
 	return nil
 }
 
-// GetByIDForUser возвращает монитор, принадлежащий указанному пользователю.
-// Чужой монитор неотличим от несуществующего: наружу уходит ErrMonitorNotFound,
-// чтобы не раскрывать факт существования чужих ресурсов.
 func (r *MonitorRepo) GetByIDForUser(ctx context.Context, id, userID string) (*domain.Monitor, error) {
 	query := `SELECT ` + monitorColumns + `
 		FROM monitors
@@ -91,7 +80,6 @@ func (r *MonitorRepo) GetByIDForUser(ctx context.Context, id, userID string) (*d
 	return &monitor, nil
 }
 
-// ListByUser возвращает страницу мониторов пользователя и общее количество.
 func (r *MonitorRepo) ListByUser(
 	ctx context.Context, userID string, limit, offset int,
 ) ([]*domain.Monitor, int, error) {
@@ -117,7 +105,6 @@ func (r *MonitorRepo) ListByUser(
 	return monitors, total, nil
 }
 
-// ListPublicByUser возвращает публичные мониторы пользователя для статус-страницы.
 func (r *MonitorRepo) ListPublicByUser(ctx context.Context, userID string) ([]*domain.Monitor, error) {
 	query := `SELECT ` + monitorColumns + `
 		FROM monitors
@@ -127,7 +114,6 @@ func (r *MonitorRepo) ListPublicByUser(ctx context.Context, userID string) ([]*d
 	return r.queryMany(ctx, query, userID)
 }
 
-// Update перезаписывает изменяемые поля монитора.
 func (r *MonitorRepo) Update(ctx context.Context, monitor *domain.Monitor) error {
 	const query = `
 		UPDATE monitors SET
@@ -164,8 +150,6 @@ func (r *MonitorRepo) Update(ctx context.Context, monitor *domain.Monitor) error
 	return nil
 }
 
-// Delete удаляет монитор пользователя вместе с его проверками и инцидентами
-// (ON DELETE CASCADE в схеме).
 func (r *MonitorRepo) Delete(ctx context.Context, id, userID string) error {
 	const query = `DELETE FROM monitors WHERE id = $1 AND user_id = $2`
 
@@ -181,10 +165,7 @@ func (r *MonitorRepo) Delete(ctx context.Context, id, userID string) error {
 	return nil
 }
 
-// LeaseDue атомарно забирает мониторы, которым пора проверяться, и сразу
-// сдвигает им next_check_at. FOR UPDATE SKIP LOCKED гарантирует, что при
-// нескольких экземплярах воркера один и тот же монитор не достанется двум —
-// это и есть механизм горизонтального масштабирования воркеров.
+// SKIP LOCKED и сдвиг next_check_at в одном запросе: один монитор не достанется двум воркерам.
 func (r *MonitorRepo) LeaseDue(ctx context.Context, now time.Time, limit int) ([]*domain.Monitor, error) {
 	query := `
 		WITH due AS (
@@ -210,7 +191,6 @@ func (r *MonitorRepo) LeaseDue(ctx context.Context, now time.Time, limit int) ([
 	return monitors, nil
 }
 
-// ApplyProbeResult фиксирует итог проверки: статус, счётчик падений и время проверки.
 func (r *MonitorRepo) ApplyProbeResult(
 	ctx context.Context,
 	monitorID string,
@@ -275,8 +255,6 @@ func (r *MonitorRepo) mapWriteError(err error) error {
 		return domain.ErrUserNotFound
 	}
 
-	// CHECK-ограничения дублируют валидацию usecase: если сюда дошло,
-	// значит в валидации дырка — отдаём доменную ошибку, а не 500.
 	if isCheckViolation(err) {
 		return fmt.Errorf("%w: %w", domain.ErrInvalidTarget, err)
 	}
@@ -284,7 +262,6 @@ func (r *MonitorRepo) mapWriteError(err error) error {
 	return fmt.Errorf("write monitor: %w", err)
 }
 
-// scanRow — общий интерфейс pgx.Row и pgx.Rows в части Scan.
 type scanRow interface {
 	Scan(dest ...any) error
 }

@@ -16,7 +16,6 @@ import (
 	recordprobe "github.com/St1lon/sentinel/internal/usecase/probe/record"
 )
 
-// newRecordUsecase собирает usecase записи результата на реальных репозиториях.
 func newRecordUsecase() *recordprobe.Usecase {
 	return recordprobe.NewUsecase(
 		repository.NewMonitorRepo(testPool),
@@ -38,8 +37,6 @@ func okCheck(monitorID string, at time.Time) *domain.Check {
 	return &domain.Check{MonitorID: monitorID, CheckedAt: at, Up: true, StatusCode: &code, LatencyMS: 120}
 }
 
-// Полный жизненный цикл инцидента на настоящей БД: падение → открытие
-// инцидента по достижении порога → восстановление → закрытие инцидента.
 func TestProbeFlow_IncidentLifecycle(t *testing.T) {
 	ctx := context.Background()
 
@@ -51,7 +48,6 @@ func TestProbeFlow_IncidentLifecycle(t *testing.T) {
 	monitor := newMonitor(ctx, t, user.ID, func(m *domain.Monitor) { m.FailureThreshold = 2 })
 	now := time.Now().UTC()
 
-	// Первый сбой: счётчик растёт, инцидента ещё нет.
 	result, err := usecase.Execute(ctx, &recordprobe.Request{
 		Monitor: monitor,
 		Check:   failedCheck(monitor.ID, now),
@@ -68,7 +64,6 @@ func TestProbeFlow_IncidentLifecycle(t *testing.T) {
 	require.NoError(t, err)
 	require.Nil(t, open)
 
-	// Второй сбой: порог достигнут — монитор падает, инцидент открывается.
 	result, err = usecase.Execute(ctx, &recordprobe.Request{
 		Monitor: monitor,
 		Check:   failedCheck(monitor.ID, now.Add(time.Minute)),
@@ -86,7 +81,6 @@ func TestProbeFlow_IncidentLifecycle(t *testing.T) {
 	require.Equal(t, "connection refused", open.Cause)
 	require.True(t, open.IsOpen())
 
-	// Третий сбой при уже открытом инциденте: второго инцидента не появляется.
 	_, err = usecase.Execute(ctx, &recordprobe.Request{
 		Monitor: monitor,
 		Check:   failedCheck(monitor.ID, now.Add(2*time.Minute)),
@@ -98,7 +92,6 @@ func TestProbeFlow_IncidentLifecycle(t *testing.T) {
 	require.Equal(t, 1, total, "частичный уникальный индекс не даёт открыть второй инцидент")
 	require.Len(t, all, 1)
 
-	// Восстановление: инцидент закрывается, монитор поднимается.
 	monitor, err = monitors.GetByIDForUser(ctx, monitor.ID, user.ID)
 	require.NoError(t, err)
 
@@ -130,8 +123,6 @@ func TestProbeFlow_TransactionRollsBackOnFailure(t *testing.T) {
 	user := newUser(ctx, t)
 	monitor := newMonitor(ctx, t, user.ID)
 
-	// Монитор удалён: вставка проверки упадёт на внешнем ключе, и статус
-	// монитора тоже не должен измениться — обе записи в одной транзакции.
 	require.NoError(t, repository.NewMonitorRepo(testPool).Delete(ctx, monitor.ID, user.ID))
 
 	_, err := newRecordUsecase().Execute(ctx, &recordprobe.Request{
@@ -157,7 +148,6 @@ func TestCheckRepo_StatsAndBuckets(t *testing.T) {
 
 	base := time.Now().UTC().Truncate(time.Hour).Add(-3 * time.Hour)
 
-	// 3 часа данных: в первом часу один сбой из двух проверок.
 	insertCheck(ctx, t, monitor.ID, base.Add(5*time.Minute), true, 100)
 	insertCheck(ctx, t, monitor.ID, base.Add(10*time.Minute), false, 5000)
 	insertCheck(ctx, t, monitor.ID, base.Add(time.Hour+5*time.Minute), true, 150)
@@ -182,13 +172,11 @@ func TestCheckRepo_StatsAndBuckets(t *testing.T) {
 	require.Equal(t, 1, buckets[0].Successful)
 	require.InDelta(t, 0.5, buckets[0].UptimeRatio(), 1e-9)
 
-	// Запрос сразу по нескольким мониторам — то, чем живёт статус-страница.
 	multi, err := checks.BucketsForMonitors(ctx, []string{monitor.ID}, from, to, domain.BucketSizeDay)
 	require.NoError(t, err)
 	require.NotEmpty(t, multi)
 	require.Equal(t, monitor.ID, multi[0].MonitorID)
 
-	// Некорректный размер корзины отклоняется до обращения к БД.
 	_, err = checks.Buckets(ctx, monitor.ID, from, to, domain.BucketSize("day'; DROP TABLE checks; --"))
 	require.ErrorIs(t, err, domain.ErrInvalidBucket)
 }
@@ -233,9 +221,6 @@ func TestUserRepo_UniqueEmailAndSlugLookup(t *testing.T) {
 	_, err = users.GetByStatusPageSlug(ctx, "no-such-slug")
 	require.ErrorIs(t, err, domain.ErrStatusPageNotFound)
 
-	// Повторная регистрация того же email запрещена уникальным индексом.
-	// Идентификатор и слаг — новые, иначе сработало бы другое ограничение
-	// и тест проверял бы не то, что заявлено.
 	duplicate := *user
 	duplicate.ID = uuid.NewString()
 	duplicate.StatusPageSlug = uuid.NewString()

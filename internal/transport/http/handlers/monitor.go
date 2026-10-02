@@ -16,7 +16,6 @@ import (
 	updatemonitor "github.com/St1lon/sentinel/internal/usecase/monitor/update"
 )
 
-// CreateMonitor — POST /api/v1/monitors.
 func (h *Handlers) CreateMonitor(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.userID(w, r)
 	if !ok {
@@ -53,7 +52,6 @@ func (h *Handlers) CreateMonitor(w http.ResponseWriter, r *http.Request) {
 	h.writeJSON(w, r, http.StatusCreated, mapper.Monitor(monitor))
 }
 
-// ListMonitors — GET /api/v1/monitors.
 func (h *Handlers) ListMonitors(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.userID(w, r)
 	if !ok {
@@ -93,7 +91,6 @@ func (h *Handlers) ListMonitors(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// GetMonitor — GET /api/v1/monitors/{monitorID}.
 func (h *Handlers) GetMonitor(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.userID(w, r)
 	if !ok {
@@ -113,7 +110,6 @@ func (h *Handlers) GetMonitor(w http.ResponseWriter, r *http.Request) {
 	h.writeJSON(w, r, http.StatusOK, mapper.Monitor(monitor))
 }
 
-// UpdateMonitor — PATCH /api/v1/monitors/{monitorID}.
 func (h *Handlers) UpdateMonitor(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.userID(w, r)
 	if !ok {
@@ -150,7 +146,6 @@ func (h *Handlers) UpdateMonitor(w http.ResponseWriter, r *http.Request) {
 	h.writeJSON(w, r, http.StatusOK, mapper.Monitor(monitor))
 }
 
-// DeleteMonitor — DELETE /api/v1/monitors/{monitorID}.
 func (h *Handlers) DeleteMonitor(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.userID(w, r)
 	if !ok {
@@ -170,7 +165,6 @@ func (h *Handlers) DeleteMonitor(w http.ResponseWriter, r *http.Request) {
 	h.writeJSON(w, r, http.StatusNoContent, nil)
 }
 
-// MonitorStats — GET /api/v1/monitors/{monitorID}/stats.
 func (h *Handlers) MonitorStats(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.userID(w, r)
 	if !ok {

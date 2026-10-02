@@ -70,8 +70,6 @@ func TestExecute_UnknownUserLooksLikeWrongPassword(t *testing.T) {
 		Password: "password123",
 	})
 
-	// Важно: именно ErrInvalidCredentials, а не ErrUserNotFound — иначе по
-	// ответу API можно перебором узнать, какие адреса зарегистрированы.
 	require.ErrorIs(t, err, domain.ErrInvalidCredentials)
 }
 

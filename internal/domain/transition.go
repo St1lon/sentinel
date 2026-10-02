@@ -5,8 +5,6 @@ import (
 	"strings"
 )
 
-// Transition — решение о смене состояния монитора после одной проверки.
-// Чистая структура данных: воркер применяет её одной транзакцией.
 type Transition struct {
 	Status              MonitorStatus
 	ConsecutiveFailures int
@@ -16,17 +14,7 @@ type Transition struct {
 	Cause               string
 }
 
-// EvaluateProbe — ядро доменной логики: по текущему состоянию монитора и результату
-// проверки решает, меняется ли статус и нужно ли открыть либо закрыть инцидент.
-//
-// Правила:
-//   - успешная проверка сбрасывает счётчик падений; если монитор был down —
-//     инцидент закрывается, статус становится up;
-//   - неуспешная увеличивает счётчик; инцидент открывается только когда счётчик
-//     достиг FailureThreshold (защита от одиночных сетевых сбоев — флаппинга);
-//   - повторная ошибка при уже открытом инциденте ничего не открывает заново.
-//
-// Функция не мутирует монитор: вызывающий применяет Transition сам.
+// Инцидент открывается только после FailureThreshold подряд неудач — защита от флаппинга.
 func EvaluateProbe(monitor *Monitor, check *Check) Transition {
 	if check.Up {
 		return successTransition(monitor)
@@ -54,7 +42,6 @@ func failureTransition(monitor *Monitor, check *Check) Transition {
 		ConsecutiveFailures: failures,
 	}
 
-	// Монитор ещё не признан упавшим, но порог достигнут — открываем инцидент.
 	if failures >= monitor.FailureThreshold && monitor.Status != MonitorStatusDown {
 		transition.Status = MonitorStatusDown
 		transition.StatusChanged = true
@@ -64,12 +51,9 @@ func failureTransition(monitor *Monitor, check *Check) Transition {
 		return transition
 	}
 
-	// Порог ещё не достигнут: монитор остаётся в прежнем статусе.
-	// Из pending до первого успеха или до порога не выходим.
 	return transition
 }
 
-// describeFailure формирует человекочитаемую причину инцидента для статус-страницы.
 func describeFailure(monitor *Monitor, check *Check) string {
 	if check.Error != nil && strings.TrimSpace(*check.Error) != "" {
 		return *check.Error

@@ -5,7 +5,6 @@ import (
 	"github.com/St1lon/sentinel/internal/usecase/common/validate"
 )
 
-// Request — монитор и результат его проверки.
 type Request struct {
 	Monitor *domain.Monitor
 	Check   *domain.Check

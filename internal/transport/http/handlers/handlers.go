@@ -1,6 +1,3 @@
-// Package handlers содержит HTTP-хендлеры. Хендлер разбирает запрос,
-// вызывает ровно один usecase и переводит результат в DTO через mapper.
-// Обращаться к репозиториям или внешним клиентам напрямую он не может.
 package handlers
 
 import (
@@ -22,13 +19,10 @@ import (
 	getuser "github.com/St1lon/sentinel/internal/usecase/user/get"
 )
 
-// Pinger — порт проверки готовности присоединённого ресурса для /readyz.
 type Pinger interface {
 	Ping(ctx context.Context) error
 }
 
-// Deps — зависимости хендлеров. Структура вместо длинного списка аргументов:
-// состав зависимостей меняется чаще, чем их смысл.
 type Deps struct {
 	Logger    *slog.Logger
 	Version   string
@@ -52,12 +46,10 @@ type Deps struct {
 	DB Pinger
 }
 
-// Handlers — набор HTTP-хендлеров приложения.
 type Handlers struct {
 	deps Deps
 }
 
-// New создаёт хендлеры.
 func New(deps Deps) *Handlers {
 	return &Handlers{deps: deps}
 }

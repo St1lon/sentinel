@@ -28,7 +28,6 @@ linters:
     - gochecknoglobals
     - goconst
     - gocritic
-    - godot
     - lll
     - mnd
     - nestif
@@ -79,8 +78,6 @@ linters:
 
     revive:
       rules:
-        - name: exported
-        - name: package-comments
         - name: error-strings
         - name: context-as-argument
         - name: indent-error-flow

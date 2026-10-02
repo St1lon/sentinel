@@ -12,7 +12,6 @@ import (
 	"github.com/St1lon/sentinel/internal/infra/prober"
 )
 
-// localProber разрешает приватные адреса: тестовый сервер поднимается на 127.0.0.1.
 func localProber() *prober.HTTPProber {
 	return prober.NewHTTPProber(prober.Options{
 		UserAgent:        "SentinelTest/1.0",
@@ -96,7 +95,6 @@ func TestHTTPProber_FailsOnUnreachableTarget(t *testing.T) {
 func TestHTTPProber_BlockedTargetBecomesFailedCheck(t *testing.T) {
 	t.Parallel()
 
-	// Prober в обычном режиме: приватные адреса запрещены.
 	strict := prober.NewHTTPProber(prober.Options{
 		UserAgent:        "SentinelTest/1.0",
 		MaxResponseBytes: 4096,
@@ -105,8 +103,6 @@ func TestHTTPProber_BlockedTargetBecomesFailedCheck(t *testing.T) {
 
 	check, err := strict.Probe(context.Background(), monitorFor("http://169.254.169.254/", http.StatusOK))
 
-	// Монитор существует, поэтому это не ошибка выполнения, а проваленная
-	// проверка с понятной причиной — пользователь увидит её на странице.
 	require.NoError(t, err)
 	require.False(t, check.Up)
 	require.Contains(t, *check.Error, "not allowed")

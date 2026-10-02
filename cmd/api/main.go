@@ -1,6 +1,3 @@
-// Команда api — HTTP-процесс приложения Sentinel.
-// main делает ровно три вещи: читает конфигурацию, собирает приложение
-// и управляет его завершением. Вся логика сборки — в internal/app.
 package main
 
 import (
@@ -17,7 +14,6 @@ import (
 
 func main() {
 	if err := run(); err != nil {
-		// Логгера может ещё не быть (ошибка конфигурации), поэтому stderr.
 		_, _ = os.Stderr.WriteString("fatal: " + err.Error() + "\n")
 		os.Exit(1)
 	}
@@ -31,8 +27,6 @@ func run() error {
 
 	logger := app.NewLogger(&cfg.Log, &cfg.App)
 
-	// SIGTERM — штатный сигнал остановки контейнера; по нему начинается
-	// graceful shutdown, а не немедленная смерть процесса (фактор IX).
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
 

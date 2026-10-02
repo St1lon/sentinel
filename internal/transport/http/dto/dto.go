@@ -1,36 +1,28 @@
-// Package dto описывает wire-формат HTTP API. Доменные структуры наружу
-// не отдаются никогда: между ними и этими типами стоит пакет mapper.
 package dto
 
 import "time"
 
-// ErrorResponse — единый формат ошибки API.
 type ErrorResponse struct {
 	Code        string `json:"code"`
 	Description string `json:"description"`
 }
 
-// RegisterRequest — тело запроса регистрации.
 type RegisterRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
-// LoginRequest — тело запроса входа.
 type LoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
-// AuthResponse — выданный токен и его владелец.
 type AuthResponse struct {
 	Token     string    `json:"token"`
 	ExpiresAt time.Time `json:"expires_at"`
 	User      User      `json:"user"`
 }
 
-// User — публичное представление пользователя. Хеш пароля здесь отсутствует
-// по построению: его просто нет в структуре.
 type User struct {
 	ID             string    `json:"id"`
 	Email          string    `json:"email"`
@@ -38,8 +30,6 @@ type User struct {
 	CreatedAt      time.Time `json:"created_at"`
 }
 
-// CreateMonitorRequest — тело создания монитора.
-// Необязательные поля — указатели: так отличается «не передано» от нуля.
 type CreateMonitorRequest struct {
 	Name             string `json:"name"`
 	Kind             string `json:"kind,omitempty"`
@@ -53,7 +43,6 @@ type CreateMonitorRequest struct {
 	Paused           *bool  `json:"paused,omitempty"`
 }
 
-// UpdateMonitorRequest — тело частичного обновления монитора.
 type UpdateMonitorRequest struct {
 	Name             *string `json:"name,omitempty"`
 	Target           *string `json:"target,omitempty"`
@@ -66,7 +55,6 @@ type UpdateMonitorRequest struct {
 	Paused           *bool   `json:"paused,omitempty"`
 }
 
-// Monitor — представление монитора в API.
 type Monitor struct {
 	ID                  string     `json:"id"`
 	Name                string     `json:"name"`
@@ -87,7 +75,6 @@ type Monitor struct {
 	UpdatedAt           time.Time  `json:"updated_at"`
 }
 
-// MonitorList — страница мониторов.
 type MonitorList struct {
 	Items  []Monitor `json:"items"`
 	Total  int       `json:"total"`
@@ -95,7 +82,6 @@ type MonitorList struct {
 	Offset int       `json:"offset"`
 }
 
-// Check — результат одной проверки.
 type Check struct {
 	ID         int64     `json:"id"`
 	CheckedAt  time.Time `json:"checked_at"`
@@ -105,13 +91,11 @@ type Check struct {
 	Error      *string   `json:"error"`
 }
 
-// CheckList — проверки монитора за период.
 type CheckList struct {
 	MonitorID string  `json:"monitor_id"`
 	Items     []Check `json:"items"`
 }
 
-// Bucket — свёрнутый интервал для графика.
 type Bucket struct {
 	BucketTime  time.Time `json:"bucket"`
 	Total       int       `json:"total"`
@@ -119,7 +103,6 @@ type Bucket struct {
 	UptimeRatio float64   `json:"uptime_ratio"`
 }
 
-// MonitorStats — агрегат по монитору за период.
 type MonitorStats struct {
 	MonitorID        string     `json:"monitor_id"`
 	From             time.Time  `json:"from"`
@@ -133,7 +116,6 @@ type MonitorStats struct {
 	Buckets          []Bucket   `json:"buckets"`
 }
 
-// Incident — инцидент в API.
 type Incident struct {
 	ID              string     `json:"id"`
 	MonitorID       string     `json:"monitor_id"`
@@ -144,7 +126,6 @@ type Incident struct {
 	DurationSeconds int64      `json:"duration_seconds"`
 }
 
-// IncidentList — страница инцидентов.
 type IncidentList struct {
 	Items  []Incident `json:"items"`
 	Total  int        `json:"total"`
@@ -152,10 +133,6 @@ type IncidentList struct {
 	Offset int        `json:"offset"`
 }
 
-// StatusPageService — монитор на публичной статус-странице.
-//
-// Здесь намеренно нет поля target: статус-страница публична, а URL цели
-// может раскрывать внутренние адреса и служебные эндпоинты.
 type StatusPageService struct {
 	Name        string     `json:"name"`
 	Status      string     `json:"status"`
@@ -164,7 +141,6 @@ type StatusPageService struct {
 	LastCheckAt *time.Time `json:"last_check_at"`
 }
 
-// StatusPageIncident — инцидент в публичной ленте.
 type StatusPageIncident struct {
 	Service         string     `json:"service"`
 	StartedAt       time.Time  `json:"started_at"`
@@ -173,7 +149,6 @@ type StatusPageIncident struct {
 	DurationSeconds int64      `json:"duration_seconds"`
 }
 
-// StatusPage — публичная статус-страница.
 type StatusPage struct {
 	From      time.Time            `json:"from"`
 	To        time.Time            `json:"to"`
@@ -182,7 +157,6 @@ type StatusPage struct {
 	Incidents []StatusPageIncident `json:"incidents"`
 }
 
-// Health — ответ технических эндпоинтов.
 type Health struct {
 	Status  string `json:"status"`
 	Version string `json:"version"`

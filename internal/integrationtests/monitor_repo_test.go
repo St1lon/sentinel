@@ -22,14 +22,12 @@ func TestMonitorRepo_CRUD(t *testing.T) {
 	user := newUser(ctx, t)
 	monitor := newMonitor(ctx, t, user.ID)
 
-	// Read.
 	loaded, err := repo.GetByIDForUser(ctx, monitor.ID, user.ID)
 	require.NoError(t, err)
 	require.Equal(t, monitor.Name, loaded.Name)
 	require.Equal(t, domain.MonitorKindHTTP, loaded.Kind)
 	require.Equal(t, domain.MonitorStatusPending, loaded.Status)
 
-	// Update.
 	loaded.Name += "-updated"
 	loaded.IntervalSeconds = 120
 	loaded.IsPublic = true
@@ -43,13 +41,11 @@ func TestMonitorRepo_CRUD(t *testing.T) {
 	require.Equal(t, 120, reloaded.IntervalSeconds)
 	require.True(t, reloaded.IsPublic)
 
-	// List.
 	monitors, total, err := repo.ListByUser(ctx, user.ID, 10, 0)
 	require.NoError(t, err)
 	require.Equal(t, 1, total)
 	require.Len(t, monitors, 1)
 
-	// Delete.
 	require.NoError(t, repo.Delete(ctx, monitor.ID, user.ID))
 
 	_, err = repo.GetByIDForUser(ctx, monitor.ID, user.ID)
@@ -67,7 +63,6 @@ func TestMonitorRepo_ForeignUserCannotSeeMonitor(t *testing.T) {
 	stranger := newUser(ctx, t)
 	monitor := newMonitor(ctx, t, owner.ID)
 
-	// Чужой монитор неотличим от несуществующего.
 	_, err := repo.GetByIDForUser(ctx, monitor.ID, stranger.ID)
 	require.ErrorIs(t, err, domain.ErrMonitorNotFound)
 
@@ -80,8 +75,6 @@ func TestMonitorRepo_DuplicateNamePerUserRejected(t *testing.T) {
 	user := newUser(ctx, t)
 	first := newMonitor(ctx, t, user.ID)
 
-	// Тот же пользователь, то же имя, другой id — ограничение уникальности
-	// (user_id, name) должно сработать на уровне БД.
 	err := repository.NewMonitorRepo(testPool).Create(ctx, &domain.Monitor{
 		ID:               uuid.NewString(),
 		UserID:           user.ID,
@@ -107,8 +100,6 @@ func TestMonitorRepo_CheckConstraintsEnforcedByDatabase(t *testing.T) {
 	repo := repository.NewMonitorRepo(testPool)
 	user := newUser(ctx, t)
 
-	// Валидация usecase уже отсекает такие значения; проверяем, что БД
-	// держит инвариант самостоятельно — на случай дырки в валидации.
 	broken := &domain.Monitor{
 		ID:               uuid.NewString(),
 		UserID:           user.ID,
@@ -144,7 +135,6 @@ func TestMonitorRepo_LeaseDueGivesEachMonitorToSingleWorker(t *testing.T) {
 		expected[monitor.ID] = struct{}{}
 	}
 
-	// Имитация нескольких экземпляров воркера: каждый тянет свою пачку.
 	const workers = 3
 
 	var (
@@ -187,8 +177,6 @@ func TestMonitorRepo_LeaseDueGivesEachMonitorToSingleWorker(t *testing.T) {
 
 	require.Len(t, unique, monitorCount, "все просроченные мониторы должны быть разобраны")
 
-	// Повторный вызов сразу после выдачи ничего не возвращает:
-	// next_check_at уже сдвинут вперёд тем же запросом.
 	again, err := repo.LeaseDue(ctx, time.Now().UTC(), monitorCount)
 	require.NoError(t, err)
 

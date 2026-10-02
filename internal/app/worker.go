@@ -15,18 +15,12 @@ import (
 	"github.com/St1lon/sentinel/internal/worker"
 )
 
-// Worker — процесс проверок со всеми его зависимостями.
 type Worker struct {
 	worker *worker.Worker
 	pool   *pgxpool.Pool
 	logger *slog.Logger
 }
 
-// BuildWorker собирает процесс worker.
-//
-// Это второй тип процесса из одной и той же кодовой базы: api обслуживает
-// запросы, worker выполняет проверки. Масштабируются они независимо
-// (фактор VIII «Concurrency»).
 func BuildWorker(ctx context.Context, cfg *config.WorkerProcessConfig, logger *slog.Logger) (*Worker, error) {
 	pool, err := postgres.NewPool(ctx, &cfg.Postgres)
 	if err != nil {
@@ -61,12 +55,10 @@ func BuildWorker(ctx context.Context, cfg *config.WorkerProcessConfig, logger *s
 	return &Worker{worker: probeWorker, pool: pool, logger: logger}, nil
 }
 
-// Run крутит цикл проверок до отмены контекста.
 func (w *Worker) Run(ctx context.Context) error {
 	return w.worker.Run(ctx)
 }
 
-// Shutdown закрывает пул соединений.
 func (w *Worker) Shutdown(_ context.Context) error {
 	w.pool.Close()
 	w.logger.Info("database pool closed")

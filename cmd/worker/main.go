@@ -1,4 +1,3 @@
-// Команда worker — процесс проверок приложения Sentinel.
 package main
 
 import (

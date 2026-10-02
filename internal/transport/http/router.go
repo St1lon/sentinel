@@ -1,4 +1,3 @@
-// Package http собирает HTTP-транспорт: роутер, цепочку middleware и сервер.
 package http
 
 import (
@@ -16,10 +15,8 @@ import (
 	"github.com/St1lon/sentinel/internal/transport/http/middleware"
 )
 
-// corsMaxAge — срок кэширования preflight-ответа браузером, в секундах.
 const corsMaxAge = 300
 
-// RouterDeps — зависимости роутера.
 type RouterDeps struct {
 	Handlers       *handlers.Handlers
 	TokenParser    middleware.TokenParser
@@ -27,11 +24,6 @@ type RouterDeps struct {
 	AllowedOrigins []string
 }
 
-// NewRouter собирает маршруты и цепочку middleware.
-//
-// Порядок цепочки: RequestID → RealIP → Recoverer → CORS → логгер.
-// Логгер стоит последним из сквозных, чтобы в записи уже был request_id,
-// а паника успевала превратиться в 500 до логирования.
 func NewRouter(deps RouterDeps) http.Handler {
 	router := chi.NewRouter()
 
@@ -50,7 +42,6 @@ func NewRouter(deps RouterDeps) http.Handler {
 	router.NotFound(notFound)
 	router.MethodNotAllowed(methodNotAllowed)
 
-	// Технические эндпоинты вне /api: их опрашивают балансировщик и оркестратор.
 	router.Get("/healthz", deps.Handlers.Healthz)
 	router.Get("/readyz", deps.Handlers.Readyz)
 
@@ -58,7 +49,6 @@ func NewRouter(deps RouterDeps) http.Handler {
 		api.Post("/auth/register", deps.Handlers.Register)
 		api.Post("/auth/login", deps.Handlers.Login)
 
-		// Публичная статус-страница: без токена, доступ по знанию слага.
 		api.Get("/public/status/{slug}", deps.Handlers.StatusPage)
 
 		api.Group(func(protected chi.Router) {

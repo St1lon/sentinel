@@ -5,7 +5,6 @@ import (
 	"github.com/St1lon/sentinel/internal/usecase/common/validate"
 )
 
-// Request — параметры выборки списка мониторов.
 type Request struct {
 	UserID string
 	Limit  int

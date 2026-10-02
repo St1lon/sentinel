@@ -1,4 +1,3 @@
-// Package listincidents реализует историю инцидентов монитора.
 package listincidents
 
 import (
@@ -8,7 +7,6 @@ import (
 	"github.com/St1lon/sentinel/internal/usecase/common/validate"
 )
 
-// Request — монитор и параметры страницы.
 type Request struct {
 	UserID    string
 	MonitorID string
@@ -35,7 +33,6 @@ func (req *Request) validate() error {
 	return nil
 }
 
-// Result — страница инцидентов монитора.
 type Result struct {
 	Monitor   *domain.Monitor
 	Incidents []*domain.Incident
@@ -44,18 +41,15 @@ type Result struct {
 	Offset    int
 }
 
-// Usecase — история инцидентов монитора.
 type Usecase struct {
 	monitors  MonitorRepo
 	incidents IncidentRepo
 }
 
-// NewUsecase собирает usecase истории инцидентов.
 func NewUsecase(monitors MonitorRepo, incidents IncidentRepo) *Usecase {
 	return &Usecase{monitors: monitors, incidents: incidents}
 }
 
-// Execute возвращает инциденты монитора пользователя.
 func (uc *Usecase) Execute(ctx context.Context, req *Request) (*Result, error) {
 	if err := req.validate(); err != nil {
 		return nil, err

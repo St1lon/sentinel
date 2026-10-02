@@ -14,9 +14,6 @@ import (
 	"github.com/St1lon/sentinel/internal/infra/db/postgres/repository"
 )
 
-// Каждый тест сам создаёт нужные ему данные с уникальными идентификаторами:
-// общих фикстур между тестами нет, порядок запуска не важен.
-
 func newUser(ctx context.Context, t *testing.T) *domain.User {
 	t.Helper()
 

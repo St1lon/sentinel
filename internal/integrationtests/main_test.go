@@ -1,8 +1,5 @@
 //go:build integration
 
-// Package integrationtests проверяет репозитории против настоящей PostgreSQL,
-// поднятой в контейнере. Эти тесты отделены билд-тегом integration, поэтому
-// обычный `go test ./...` их не запускает и не требует Docker.
 package integrationtests
 
 import (
@@ -27,8 +24,6 @@ const (
 	postgresImage  = "postgres:17-alpine"
 )
 
-// testPool — общий пул на весь пакет: контейнер поднимается один раз,
-// изоляцию между тестами даёт уникальность данных, а не пересоздание БД.
 var testPool *pgxpool.Pool
 
 func TestMain(m *testing.M) {
@@ -73,8 +68,6 @@ func setup(ctx context.Context) (testcontainers.Container, *pgxpool.Pool, error)
 		return container, nil, fmt.Errorf("connection string: %w", err)
 	}
 
-	// Схема накатывается теми же миграциями, что в проде, — иначе тесты
-	// проверяли бы структуру, которой в проде нет (фактор X).
 	if err := applyMigrations(dsn); err != nil {
 		return container, nil, err
 	}

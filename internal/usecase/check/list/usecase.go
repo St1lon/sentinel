@@ -1,4 +1,3 @@
-// Package listchecks реализует чтение последних проверок монитора.
 package listchecks
 
 import (
@@ -9,7 +8,6 @@ import (
 	"github.com/St1lon/sentinel/internal/usecase/common/validate"
 )
 
-// Request — монитор, период и ограничение выборки.
 type Request struct {
 	UserID    string
 	MonitorID string
@@ -41,24 +39,20 @@ func (req *Request) validate() error {
 	return nil
 }
 
-// Result — проверки монитора, свежие сверху.
 type Result struct {
 	Monitor *domain.Monitor
 	Checks  []*domain.Check
 }
 
-// Usecase — чтение проверок монитора.
 type Usecase struct {
 	monitors MonitorRepo
 	checks   CheckRepo
 }
 
-// NewUsecase собирает usecase чтения проверок.
 func NewUsecase(monitors MonitorRepo, checks CheckRepo) *Usecase {
 	return &Usecase{monitors: monitors, checks: checks}
 }
 
-// Execute возвращает проверки монитора пользователя за период.
 func (uc *Usecase) Execute(ctx context.Context, req *Request) (*Result, error) {
 	if err := req.validate(); err != nil {
 		return nil, err

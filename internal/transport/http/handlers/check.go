@@ -12,7 +12,6 @@ import (
 	listincidents "github.com/St1lon/sentinel/internal/usecase/incident/list"
 )
 
-// ListChecks — GET /api/v1/monitors/{monitorID}/checks.
 func (h *Handlers) ListChecks(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.userID(w, r)
 	if !ok {
@@ -52,7 +51,6 @@ func (h *Handlers) ListChecks(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// ListIncidents — GET /api/v1/monitors/{monitorID}/incidents.
 func (h *Handlers) ListIncidents(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.userID(w, r)
 	if !ok {

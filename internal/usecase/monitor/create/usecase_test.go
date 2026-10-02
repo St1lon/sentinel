@@ -59,7 +59,6 @@ func TestExecute_AppliesDefaults(t *testing.T) {
 	require.Equal(t, domain.MonitorStatusPending, monitor.Status)
 	require.NotEmpty(t, monitor.ID)
 
-	// Первая проверка должна уйти сразу, а не через interval.
 	require.False(t, monitor.NextCheckAt.After(monitor.CreatedAt))
 }
 

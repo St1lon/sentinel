@@ -11,11 +11,6 @@ import (
 	cleanupchecks "github.com/St1lon/sentinel/internal/usecase/maintenance/cleanup"
 )
 
-// RunCleanup — одноразовый административный процесс: удаляет устаревшие
-// проверки и завершается (фактор XII «Admin processes»).
-//
-// Запускается из того же образа и с той же конфигурацией, что api и worker,
-// поэтому не может разойтись с ними по версии кода или схеме БД.
 func RunCleanup(ctx context.Context, cfg *config.CleanupConfig, logger *slog.Logger) error {
 	pool, err := postgres.NewPool(ctx, &cfg.Postgres)
 	if err != nil {

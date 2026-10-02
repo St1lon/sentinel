@@ -5,9 +5,6 @@ import (
 	"github.com/St1lon/sentinel/internal/usecase/common/validate"
 )
 
-// Request — входные данные создания монитора.
-// Необязательные числовые поля — указатели, чтобы отличить «не передано»
-// (подставляем значение по умолчанию) от переданного нуля (ошибка валидации).
 type Request struct {
 	UserID           string
 	Name             string
@@ -21,7 +18,6 @@ type Request struct {
 	IsPublic         bool
 	Paused           bool
 
-	// Нормализованные значения, заполняются validate().
 	kind             domain.MonitorKind
 	method           string
 	intervalSeconds  int
@@ -30,7 +26,6 @@ type Request struct {
 	failureThreshold int
 }
 
-// validate проверяет и нормализует входные данные, подставляя значения по умолчанию.
 func (req *Request) validate() error {
 	if !validate.UUID(req.UserID) {
 		return domain.ErrUnauthenticated

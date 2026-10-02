@@ -1,4 +1,3 @@
-// Package registeruser реализует регистрацию пользователя.
 package registeruser
 
 import (
@@ -14,31 +13,24 @@ import (
 	"github.com/St1lon/sentinel/internal/domain"
 )
 
-// slugEntropyBytes — размер случайной части слага публичной статус-страницы.
-// 10 байт ≈ 80 бит: слаг является capability-ссылкой, поэтому угадываться не должен.
 const slugEntropyBytes = 10
 
-// Result — результат регистрации: пользователь и сразу выданный токен,
-// чтобы клиенту не требовался отдельный вход после регистрации.
 type Result struct {
 	User      *domain.User
 	Token     string
 	ExpiresAt time.Time
 }
 
-// Usecase — регистрация пользователя.
 type Usecase struct {
 	users  UserRepo
 	hasher PasswordHasher
 	tokens TokenIssuer
 }
 
-// NewUsecase собирает usecase регистрации.
 func NewUsecase(users UserRepo, hasher PasswordHasher, tokens TokenIssuer) *Usecase {
 	return &Usecase{users: users, hasher: hasher, tokens: tokens}
 }
 
-// Execute регистрирует пользователя и выдаёт ему токен.
 func (uc *Usecase) Execute(ctx context.Context, req *Request) (*Result, error) {
 	if err := req.validate(); err != nil {
 		return nil, err
@@ -74,7 +66,6 @@ func (uc *Usecase) Execute(ctx context.Context, req *Request) (*Result, error) {
 	return &Result{User: user, Token: token, ExpiresAt: expiresAt}, nil
 }
 
-// newStatusPageSlug генерирует непредсказуемый слаг публичной статус-страницы.
 func newStatusPageSlug() (string, error) {
 	buf := make([]byte, slugEntropyBytes)
 

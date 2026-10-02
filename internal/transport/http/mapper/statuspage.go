@@ -7,7 +7,6 @@ import (
 	"github.com/St1lon/sentinel/internal/transport/http/dto"
 )
 
-// Статусы сводки публичной страницы.
 const (
 	overallOperational = "operational"
 	overallDegraded    = "degraded"
@@ -15,9 +14,6 @@ const (
 	overallUnknown     = "unknown"
 )
 
-// StatusPage собирает публичную страницу из мониторов, корзин и инцидентов.
-// Корзины приходят одним плоским списком по всем мониторам, поэтому здесь
-// они группируются по монитору — это дешевле, чем запрос на каждый монитор.
 func StatusPage(
 	from, to time.Time,
 	monitors []*domain.Monitor,
@@ -73,7 +69,6 @@ func statusPageIncidents(
 	return items
 }
 
-// uptimeOverBuckets считает аптайм за весь период по уже свёрнутым корзинам.
 func uptimeOverBuckets(buckets []*domain.Bucket) float64 {
 	var total, successful int
 
@@ -89,8 +84,6 @@ func uptimeOverBuckets(buckets []*domain.Bucket) float64 {
 	return float64(successful) / float64(total)
 }
 
-// overallStatus — сводка по всем публичным мониторам:
-// хотя бы один упал — down, часть ещё не проверялась — degraded.
 func overallStatus(monitors []*domain.Monitor) string {
 	if len(monitors) == 0 {
 		return overallUnknown

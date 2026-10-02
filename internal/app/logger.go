@@ -1,5 +1,3 @@
-// Package app — composition root: ручная сборка зависимостей и управление
-// жизненным циклом процессов. Выше этого пакета только cmd/*/main.go.
 package app
 
 import (
@@ -9,11 +7,6 @@ import (
 	"github.com/St1lon/sentinel/internal/config"
 )
 
-// NewLogger собирает структурированный логгер, пишущий в stdout.
-//
-// Приложение не управляет местом хранения логов: это поток событий, который
-// перенаправляет среда исполнения (фактор XI «Logs»). Поэтому ни файлов,
-// ни ротации, ни отправки логов во внешние системы здесь нет.
 func NewLogger(logCfg *config.LogConfig, appCfg *config.AppConfig) *slog.Logger {
 	opts := &slog.HandlerOptions{Level: parseLevel(logCfg.Level)}
 

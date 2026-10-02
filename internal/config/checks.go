@@ -9,13 +9,11 @@ import (
 const (
 	envProduction = "production"
 
-	// Секрет по умолчанию из .env.example — он публичный, в проде запрещён.
 	exampleJWTSecret = "change-me-in-production-at-least-32-chars"
 )
 
 var errInvalidConfig = errors.New("invalid config")
 
-// checkPostgres — кросс-полевые проверки, которые нельзя выразить тегами.
 func checkPostgres(cfg *PostgresConfig) error {
 	if cfg.MinConns > cfg.MaxConns {
 		return fmt.Errorf(

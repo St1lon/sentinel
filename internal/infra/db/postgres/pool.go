@@ -1,5 +1,3 @@
-// Package postgres содержит инфраструктуру доступа к PostgreSQL:
-// пул соединений, менеджер транзакций и реализации репозиториев.
 package postgres
 
 import (
@@ -11,8 +9,6 @@ import (
 	"github.com/St1lon/sentinel/internal/config"
 )
 
-// NewPool создаёт пул соединений по DSN из конфигурации и проверяет доступность БД.
-// БД — присоединённый ресурс: кроме DSN из окружения о ней ничего не известно.
 func NewPool(ctx context.Context, cfg *config.PostgresConfig) (*pgxpool.Pool, error) {
 	poolCfg, err := pgxpool.ParseConfig(cfg.DSN)
 	if err != nil {

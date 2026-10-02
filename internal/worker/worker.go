@@ -1,7 +1,3 @@
-// Package worker — процесс проверок. Он забирает у БД мониторы, которым пора
-// проверяться, параллельно их пингует и отдаёт результаты в usecase.
-// Сама бизнес-логика (когда монитор считается упавшим) живёт в domain,
-// здесь только оркестрация и параллелизм.
 package worker
 
 import (
@@ -17,19 +13,16 @@ import (
 	recordprobe "github.com/St1lon/sentinel/internal/usecase/probe/record"
 )
 
-// Prober — порт выполнения одной проверки; реализуется infra/prober.
 type Prober interface {
 	Probe(ctx context.Context, monitor *domain.Monitor) (*domain.Check, error)
 }
 
-// Options — параметры цикла проверок.
 type Options struct {
 	Concurrency  int
 	BatchSize    int
 	PollInterval time.Duration
 }
 
-// Worker — цикл проверок.
 type Worker struct {
 	lease  *leasemonitors.Usecase
 	record *recordprobe.Usecase
@@ -38,7 +31,6 @@ type Worker struct {
 	opts   Options
 }
 
-// New собирает воркер.
 func New(
 	lease *leasemonitors.Usecase,
 	record *recordprobe.Usecase,
@@ -49,10 +41,6 @@ func New(
 	return &Worker{lease: lease, record: record, prober: prober, logger: logger, opts: opts}
 }
 
-// Run крутит цикл до отмены контекста.
-//
-// Воркер не хранит состояние в памяти: расписание живёт в БД, поэтому его можно
-// убить в любой момент и запустить сколько угодно экземпляров (факторы VI и IX).
 func (w *Worker) Run(ctx context.Context) error {
 	w.logger.Info("worker started",
 		slog.Int("concurrency", w.opts.Concurrency),
@@ -71,14 +59,12 @@ func (w *Worker) Run(ctx context.Context) error {
 			return nil
 		case <-ticker.C:
 			if err := w.runOnce(ctx); err != nil && !errors.Is(err, context.Canceled) {
-				// Ошибка цикла не роняет процесс: следующий тик попробует снова.
 				w.logger.ErrorContext(ctx, "probe cycle failed", slog.String("error", err.Error()))
 			}
 		}
 	}
 }
 
-// runOnce обрабатывает одну пачку мониторов.
 func (w *Worker) runOnce(ctx context.Context) error {
 	monitors, err := w.lease.Execute(ctx, &leasemonitors.Request{
 		BatchSize: w.opts.BatchSize,
@@ -112,9 +98,6 @@ func (w *Worker) runOnce(ctx context.Context) error {
 	return nil
 }
 
-// checkOne проверяет один монитор и записывает результат.
-// Ошибка по одному монитору не должна отменять остальную пачку, поэтому она
-// логируется, а не возвращается в errgroup.
 func (w *Worker) checkOne(ctx context.Context, monitor *domain.Monitor) {
 	check, err := w.prober.Probe(ctx, monitor)
 	if err != nil {

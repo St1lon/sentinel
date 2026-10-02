@@ -71,8 +71,6 @@ func (s *incidentRepoStub) ResolveOpen(_ context.Context, _ string, _ time.Time)
 	return nil
 }
 
-// txStub просто вызывает функцию: транзакционность проверяется
-// интеграционными тестами на реальной БД, здесь важна последовательность шагов.
 type txStub struct {
 	calls int
 }

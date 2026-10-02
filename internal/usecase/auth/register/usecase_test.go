@@ -12,9 +12,6 @@ import (
 	registeruser "github.com/St1lon/sentinel/internal/usecase/auth/register"
 )
 
-// Порты подменяются рукописными стабами: интерфейсы узкие (один-два метода),
-// генератор моков здесь дал бы больше кода, чем экономии.
-
 type userRepoStub struct {
 	created *domain.User
 	err     error

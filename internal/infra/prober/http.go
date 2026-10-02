@@ -13,8 +13,6 @@ import (
 	"github.com/St1lon/sentinel/internal/domain"
 )
 
-// Options — параметры HTTP-prober'а. Инфраструктура не зависит от пакета config:
-// composition root сам перекладывает конфигурацию в эту структуру.
 type Options struct {
 	UserAgent        string
 	MaxResponseBytes int64
@@ -22,7 +20,6 @@ type Options struct {
 	AllowPrivate     bool
 }
 
-// HTTPProber выполняет HTTP-проверку цели.
 type HTTPProber struct {
 	client    *http.Client
 	guard     *Guard
@@ -31,7 +28,6 @@ type HTTPProber struct {
 	now       func() time.Time
 }
 
-// NewHTTPProber собирает prober с диалером, проверяющим адрес перед соединением.
 func NewHTTPProber(opts Options) *HTTPProber {
 	guard := NewGuard(opts.AllowPrivate)
 
@@ -59,7 +55,6 @@ func NewHTTPProber(opts Options) *HTTPProber {
 			if len(via) > opts.MaxRedirects {
 				return fmt.Errorf("stopped after %d redirects", opts.MaxRedirects)
 			}
-			// Каждый редирект проверяется заново: цель могла увести на внутренний адрес.
 			if _, err := guard.CheckURL(req.URL.String()); err != nil {
 				return err
 			}
@@ -77,11 +72,6 @@ func NewHTTPProber(opts Options) *HTTPProber {
 	}
 }
 
-// Probe выполняет одну проверку монитора и возвращает её результат.
-//
-// Неудача проверки — это нормальный результат (Check.Up = false), а не ошибка:
-// ошибка возвращается только когда проверку невозможно выполнить в принципе
-// (неподдерживаемый вид монитора).
 func (p *HTTPProber) Probe(ctx context.Context, monitor *domain.Monitor) (*domain.Check, error) {
 	if monitor.Kind != domain.MonitorKindHTTP {
 		return nil, fmt.Errorf("%w: %s is not implemented", domain.ErrInvalidMonitorKind, monitor.Kind)
@@ -111,8 +101,6 @@ func (p *HTTPProber) Probe(ctx context.Context, monitor *domain.Monitor) (*domai
 	}
 	defer func() { _ = response.Body.Close() }()
 
-	// Тело вычитывается ограниченно: цель может отдавать гигабайты,
-	// а латентность должна включать получение ответа, а не только заголовков.
 	if _, err := io.Copy(io.Discard, io.LimitReader(response.Body, p.maxBody)); err != nil {
 		return p.failedCheck(monitor, startedAt, unwrapProbeError(err)), nil
 	}
@@ -149,8 +137,6 @@ func (p *HTTPProber) failedCheck(monitor *domain.Monitor, startedAt time.Time, c
 	}
 }
 
-// unwrapProbeError превращает ошибку http-клиента в короткое сообщение,
-// пригодное для показа на статус-странице.
 func unwrapProbeError(err error) error {
 	var urlErr *net.OpError
 	if errors.As(err, &urlErr) {

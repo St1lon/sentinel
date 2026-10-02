@@ -7,7 +7,6 @@ import (
 	"github.com/St1lon/sentinel/internal/usecase/common/validate"
 )
 
-// Request — частичное обновление: nil означает «поле не передано».
 type Request struct {
 	UserID    string
 	MonitorID string
@@ -23,10 +22,6 @@ type Request struct {
 	Paused           *bool
 }
 
-// validate проверяет переданные поля. Полную пару интервал/таймаут
-// проверить здесь нельзя — не хватает текущих значений, поэтому
-// кросс-проверка выполняется в applyTo.
-//
 //nolint:cyclop // линейная проверка независимых опциональных полей
 func (req *Request) validate() error {
 	if !validate.UUID(req.UserID) {
@@ -95,7 +90,6 @@ func (req *Request) isEmpty() bool {
 		req.Paused == nil
 }
 
-// applyTo переносит переданные поля в монитор и сообщает, изменился ли признак паузы.
 func (req *Request) applyTo(monitor *domain.Monitor) bool {
 	if req.Name != nil {
 		monitor.Name = *req.Name
@@ -145,8 +139,6 @@ func (req *Request) applyPause(monitor *domain.Monitor) bool {
 		return true
 	}
 
-	// Возврат из паузы: историю падений сбрасываем и проверяем сразу,
-	// не дожидаясь следующего интервала.
 	monitor.Status = domain.MonitorStatusPending
 	monitor.ConsecutiveFailures = 0
 	monitor.NextCheckAt = time.Now().UTC()
@@ -154,8 +146,6 @@ func (req *Request) applyPause(monitor *domain.Monitor) bool {
 	return true
 }
 
-// ValidateSchedule проверяет пару интервал/таймаут с учётом текущих значений
-// монитора: при PATCH может прийти только одно из двух полей.
 func (req *Request) ValidateSchedule(monitor *domain.Monitor) error {
 	interval := monitor.IntervalSeconds
 	if req.IntervalSeconds != nil {

@@ -7,7 +7,6 @@ import (
 	"github.com/St1lon/sentinel/internal/usecase/common/validate"
 )
 
-// Request — монитор, период и размер корзины.
 type Request struct {
 	UserID    string
 	MonitorID string

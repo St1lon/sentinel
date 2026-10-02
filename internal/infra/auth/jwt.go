@@ -9,9 +9,6 @@ import (
 	"github.com/St1lon/sentinel/internal/domain"
 )
 
-// JWTIssuer выдаёт и проверяет access-токены HS256.
-// Токены самодостаточны: процесс api не хранит серверных сессий и остаётся
-// stateless, поэтому его можно масштабировать и перезапускать свободно.
 type JWTIssuer struct {
 	secret []byte
 	ttl    time.Duration
@@ -19,7 +16,6 @@ type JWTIssuer struct {
 	now    func() time.Time
 }
 
-// NewJWTIssuer создаёт издателя токенов.
 func NewJWTIssuer(secret string, ttl time.Duration, issuer string) *JWTIssuer {
 	return &JWTIssuer{
 		secret: []byte(secret),
@@ -29,7 +25,6 @@ func NewJWTIssuer(secret string, ttl time.Duration, issuer string) *JWTIssuer {
 	}
 }
 
-// Issue выдаёт токен для пользователя.
 func (i *JWTIssuer) Issue(userID string) (string, time.Time, error) {
 	issuedAt := i.now().UTC()
 	expiresAt := issuedAt.Add(i.ttl)
@@ -49,8 +44,6 @@ func (i *JWTIssuer) Issue(userID string) (string, time.Time, error) {
 	return signed, expiresAt, nil
 }
 
-// ParseUserID проверяет подпись и срок токена и возвращает идентификатор пользователя.
-// Любая проблема с токеном — это domain.ErrUnauthenticated, детали наружу не уходят.
 func (i *JWTIssuer) ParseUserID(token string) (string, error) {
 	parsed, err := jwt.ParseWithClaims(
 		token,

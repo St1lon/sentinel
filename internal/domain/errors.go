@@ -2,10 +2,7 @@ package domain
 
 import "errors"
 
-// Sentinel-ошибки домена. Инфраструктура транслирует в них свои ошибки
-// (например, unique violation Postgres), транспорт — маппит их в HTTP-статусы.
 var (
-	// Пользователи и аутентификация.
 	ErrUserNotFound       = errors.New("user not found")
 	ErrEmailAlreadyUsed   = errors.New("email already used")
 	ErrInvalidCredentials = errors.New("invalid credentials")
@@ -13,7 +10,6 @@ var (
 	ErrWeakPassword       = errors.New("password is too weak")
 	ErrUnauthenticated    = errors.New("unauthenticated")
 
-	// Мониторы.
 	ErrMonitorNotFound        = errors.New("monitor not found")
 	ErrMonitorNameTaken       = errors.New("monitor name already taken")
 	ErrInvalidMonitorName     = errors.New("invalid monitor name")
@@ -27,14 +23,11 @@ var (
 	ErrInvalidThreshold       = errors.New("invalid failure threshold")
 	ErrNothingToUpdate        = errors.New("nothing to update")
 
-	// Статус-страница.
 	ErrStatusPageNotFound = errors.New("status page not found")
 
-	// Выборки и пагинация.
 	ErrInvalidTimeRange = errors.New("invalid time range")
 	ErrInvalidPaging    = errors.New("invalid paging parameters")
 	ErrInvalidBucket    = errors.New("invalid bucket size")
 
-	// Безопасность исходящих проверок.
 	ErrTargetNotAllowed = errors.New("target address is not allowed")
 )

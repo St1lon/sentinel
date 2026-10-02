@@ -15,7 +15,6 @@ import (
 	"github.com/St1lon/sentinel/internal/transport/http/dto"
 )
 
-// defaultStatsWindow — период статистики, если клиент не передал from/to.
 const defaultStatsWindow = 24 * time.Hour
 
 func (h *Handlers) writeJSON(w http.ResponseWriter, r *http.Request, status int, payload any) {
@@ -27,13 +26,10 @@ func (h *Handlers) writeJSON(w http.ResponseWriter, r *http.Request, status int,
 	}
 
 	if err := json.NewEncoder(w).Encode(payload); err != nil {
-		// Статус уже отправлен, поэтому остаётся только зафиксировать в логе.
 		h.deps.Logger.ErrorContext(r.Context(), "encode response", slog.String("error", err.Error()))
 	}
 }
 
-// writeError транслирует ошибку в ответ API; неизвестные ошибки логируются
-// с подробностями, а клиенту уходит нейтральное "internal error".
 func (h *Handlers) writeError(w http.ResponseWriter, r *http.Request, err error) {
 	apiErr := apierrors.From(err)
 
@@ -58,8 +54,6 @@ func (h *Handlers) writeAPIError(w http.ResponseWriter, r *http.Request, apiErr 
 	})
 }
 
-// decodeJSON читает тело запроса с ограничением размера и запретом
-// неизвестных полей: опечатка в имени поля не должна молча игнорироваться.
 func (h *Handlers) decodeJSON(w http.ResponseWriter, r *http.Request, dst any) error {
 	reader := http.MaxBytesReader(w, r.Body, h.deps.BodyLimit)
 
@@ -79,7 +73,6 @@ func (h *Handlers) decodeJSON(w http.ResponseWriter, r *http.Request, dst any) e
 		return apierrors.Malformed(err.Error())
 	}
 
-	// В теле должен быть ровно один JSON-объект.
 	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
 		return apierrors.Malformed("body must contain a single json object")
 	}
@@ -87,7 +80,6 @@ func (h *Handlers) decodeJSON(w http.ResponseWriter, r *http.Request, dst any) e
 	return nil
 }
 
-// handleDecodeError отправляет клиенту ошибку разбора тела запроса.
 func (h *Handlers) handleDecodeError(w http.ResponseWriter, r *http.Request, err error) {
 	var apiErr apierrors.APIError
 	if errors.As(err, &apiErr) {
@@ -113,7 +105,6 @@ func intQuery(r *http.Request, name string, fallback int) (int, error) {
 	return value, nil
 }
 
-// timeRangeQuery разбирает from/to в RFC3339; по умолчанию — последние сутки.
 func timeRangeQuery(r *http.Request, now time.Time) (time.Time, time.Time, error) {
 	to := now
 	from := now.Add(-defaultStatsWindow)

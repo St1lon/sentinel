@@ -1,6 +1,3 @@
-// Package apierrors переводит sentinel-ошибки домена в HTTP-статусы
-// и структурированные коды ответа. Это единственное место, где доменная
-// ошибка превращается в HTTP: хендлеры сами HTTP-статусами не оперируют.
 package apierrors
 
 import (
@@ -10,7 +7,6 @@ import (
 	"github.com/St1lon/sentinel/internal/domain"
 )
 
-// Коды ошибок API. Клиент ориентируется на них, а не на текст описания.
 const (
 	CodeInvalidEmail       = "INVALID_EMAIL"
 	CodeWeakPassword       = "WEAK_PASSWORD"
@@ -43,22 +39,16 @@ const (
 	CodeServiceUnavailable = "SERVICE_UNAVAILABLE"
 )
 
-// APIError — ответ об ошибке: HTTP-статус плюс машинный код и описание.
-// Реализует error, чтобы транспортные ошибки (разбор тела, параметры запроса)
-// можно было возвращать из вспомогательных функций обычным путём.
 type APIError struct {
 	Status      int
 	Code        string
 	Description string
 }
 
-// Error делает APIError ошибкой.
 func (e APIError) Error() string {
 	return e.Code + ": " + e.Description
 }
 
-// mapping — таблица трансляции доменных ошибок.
-// Порядок не важен: сопоставление идёт через errors.Is.
 var mapping = []struct {
 	err    error
 	status int
@@ -91,9 +81,6 @@ var mapping = []struct {
 	{domain.ErrInvalidBucket, http.StatusBadRequest, CodeInvalidBucket},
 }
 
-// From транслирует ошибку в APIError.
-// Неизвестная ошибка — это 500 без подробностей: детали уходят в лог,
-// а не клиенту, чтобы не раскрывать внутреннее устройство сервиса.
 func From(err error) APIError {
 	for _, item := range mapping {
 		if errors.Is(err, item.err) {
@@ -108,12 +95,10 @@ func From(err error) APIError {
 	}
 }
 
-// IsInternal сообщает, что ошибка не распознана и должна попасть в лог как ошибка сервера.
 func IsInternal(err error) bool {
 	return From(err).Status >= http.StatusInternalServerError
 }
 
-// Malformed возвращает ошибку разбора тела запроса.
 func Malformed(description string) APIError {
 	return APIError{Status: http.StatusBadRequest, Code: CodeMalformedBody, Description: description}
 }

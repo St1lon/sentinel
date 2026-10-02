@@ -1,6 +1,3 @@
-// Package config загружает конфигурацию строго из переменных окружения
-// (фактор III «Config» методологии 12 factors). В коде нет ни одного
-// дефолта с хостом, паролем или ключом: такие значения обязательны в env.
 package config
 
 import (
@@ -15,20 +12,16 @@ const (
 	minJWTSecretLength = 32
 )
 
-// AppConfig — общие для всех процессов сведения о деплое.
 type AppConfig struct {
 	Env     string `env:"APP_ENV"     envDefault:"development" validate:"oneof=development staging production"`
 	Version string `env:"APP_VERSION" envDefault:"dev"         validate:"required"`
 }
 
-// LogConfig — параметры структурированного логирования в stdout.
 type LogConfig struct {
 	Level  string `env:"LOG_LEVEL"  envDefault:"info" validate:"oneof=debug info warn error"`
 	Format string `env:"LOG_FORMAT" envDefault:"json" validate:"oneof=json text"`
 }
 
-// PostgresConfig — подключение к БД как к присоединённому ресурсу (фактор IV).
-// DSN обязателен и не имеет дефолта: приложение не «знает» свою базу.
 type PostgresConfig struct {
 	DSN             string        `env:"DATABASE_URL,required"       validate:"required,startswith=postgres"`
 	MaxConns        int32         `env:"POSTGRES_MAX_CONNS"          envDefault:"10" validate:"min=1,max=1000"`
@@ -38,7 +31,6 @@ type PostgresConfig struct {
 	ConnectTimeout  time.Duration `env:"POSTGRES_CONNECT_TIMEOUT"    envDefault:"5s"  validate:"min=100ms"`
 }
 
-// HTTPConfig — параметры входящего HTTP-сервера (фактор VII «Port binding»).
 type HTTPConfig struct {
 	Port               int           `env:"HTTP_PORT"                  envDefault:"8080" validate:"min=1,max=65535"`
 	ReadHeaderTimeout  time.Duration `env:"HTTP_READ_HEADER_TIMEOUT"   envDefault:"5s"   validate:"min=100ms"`
@@ -50,8 +42,6 @@ type HTTPConfig struct {
 	RequestBodyLimit   int64         `env:"HTTP_REQUEST_BODY_LIMIT"    envDefault:"65536" validate:"min=1024"`
 }
 
-// AuthConfig — выдача и проверка JWT, стоимость bcrypt.
-// Секрет обязателен и не имеет дефолта: он часть окружения, а не кода.
 type AuthConfig struct {
 	JWTSecret  string        `env:"AUTH_JWT_SECRET,required" validate:"required,min=32"`
 	TokenTTL   time.Duration `env:"AUTH_TOKEN_TTL"  envDefault:"24h" validate:"min=1m"`
@@ -59,8 +49,6 @@ type AuthConfig struct {
 	Issuer     string        `env:"AUTH_JWT_ISSUER" envDefault:"sentinel" validate:"required"`
 }
 
-// WorkerConfig — параллелизм воркера проверок (фактор VIII «Concurrency»)
-// и политика безопасности исходящих запросов.
 type WorkerConfig struct {
 	Concurrency         int           `env:"WORKER_CONCURRENCY"           envDefault:"8"  validate:"min=1,max=1024"`
 	BatchSize           int           `env:"WORKER_BATCH_SIZE"            envDefault:"50"  validate:"min=1,max=1000"`
@@ -72,13 +60,11 @@ type WorkerConfig struct {
 	AllowPrivateTargets bool          `env:"WORKER_ALLOW_PRIVATE_TARGETS" envDefault:"false"`
 }
 
-// RetentionConfig — параметры одноразового административного процесса очистки (фактор XII).
 type RetentionConfig struct {
 	CheckRetentionDays int `env:"RETENTION_CHECK_DAYS" envDefault:"30" validate:"min=1,max=3650"`
 	BatchSize          int `env:"RETENTION_BATCH_SIZE" envDefault:"10000" validate:"min=100,max=1000000"`
 }
 
-// APIConfig — полная конфигурация процесса api.
 type APIConfig struct {
 	App      AppConfig
 	Log      LogConfig
@@ -87,7 +73,6 @@ type APIConfig struct {
 	Auth     AuthConfig
 }
 
-// WorkerProcessConfig — полная конфигурация процесса worker.
 type WorkerProcessConfig struct {
 	App      AppConfig
 	Log      LogConfig
@@ -95,7 +80,6 @@ type WorkerProcessConfig struct {
 	Worker   WorkerConfig
 }
 
-// CleanupConfig — полная конфигурация одноразового процесса cleanup.
 type CleanupConfig struct {
 	App       AppConfig
 	Log       LogConfig
@@ -103,12 +87,10 @@ type CleanupConfig struct {
 	Retention RetentionConfig
 }
 
-// NewValidator возвращает валидатор, общий для всех загрузчиков конфигурации.
 func NewValidator() *validator.Validate {
 	return validator.New(validator.WithRequiredStructEnabled())
 }
 
-// LoadAPIConfig читает и валидирует конфигурацию процесса api.
 func LoadAPIConfig(validate *validator.Validate) (*APIConfig, error) {
 	cfg, err := parse[APIConfig](validate)
 	if err != nil {
@@ -130,7 +112,6 @@ func LoadAPIConfig(validate *validator.Validate) (*APIConfig, error) {
 	return cfg, nil
 }
 
-// LoadWorkerConfig читает и валидирует конфигурацию процесса worker.
 func LoadWorkerConfig(validate *validator.Validate) (*WorkerProcessConfig, error) {
 	cfg, err := parse[WorkerProcessConfig](validate)
 	if err != nil {
@@ -141,8 +122,6 @@ func LoadWorkerConfig(validate *validator.Validate) (*WorkerProcessConfig, error
 		return nil, err
 	}
 
-	// Воркер держит до Concurrency одновременных запросов к БД при записи
-	// результатов, поэтому пул не должен быть заведомо меньше параллелизма.
 	if int(cfg.Postgres.MaxConns) < cfg.Worker.Concurrency {
 		return nil, fmt.Errorf(
 			"%w: POSTGRES_MAX_CONNS (%d) must be >= WORKER_CONCURRENCY (%d)",
@@ -160,7 +139,6 @@ func LoadWorkerConfig(validate *validator.Validate) (*WorkerProcessConfig, error
 	return cfg, nil
 }
 
-// LoadCleanupConfig читает и валидирует конфигурацию процесса cleanup.
 func LoadCleanupConfig(validate *validator.Validate) (*CleanupConfig, error) {
 	cfg, err := parse[CleanupConfig](validate)
 	if err != nil {
