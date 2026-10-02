@@ -1,0 +1,217 @@
+# Полное окружение приложения: PostgreSQL, миграции, API, воркер проверок
+# и фронтенд. Локально, в CI и в проде поднимается один и тот же файл —
+# различаются только значения переменных окружения (фактор X «Dev/prod parity»).
+#
+# Запуск:   docker compose up --build -d      (или make up)
+# Очистка:  docker compose down -v            (или make down)
+#
+# Файл лежит в корне репозитория, поэтому Compose сам читает .env рядом с ним —
+# никаких дополнительных флагов не нужно. Если .env ещё нет:
+#   cp .env.example .env      (или make env)
+
+name: sentinel
+
+# ---------------------------------------------------------------------------
+# Общие фрагменты. Выносятся в анкоры, чтобы строка подключения и настройки
+# процессов были объявлены один раз: иначе смена пароля требует правки
+# в четырёх местах, и рано или поздно одно из них отстанет.
+# ---------------------------------------------------------------------------
+
+x-database-url: &database-url >-
+  postgres://${POSTGRES_USER:-sentinel}:${POSTGRES_PASSWORD:-sentinel}@postgres:5432/${POSTGRES_DB:-sentinel}?sslmode=disable
+
+x-app-env: &app-env
+  APP_ENV: ${APP_ENV:-development}
+  APP_VERSION: ${APP_VERSION:-dev}
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  LOG_FORMAT: ${LOG_FORMAT:-json}
+
+x-postgres-env: &postgres-env
+  POSTGRES_MAX_CONNS: ${POSTGRES_MAX_CONNS:-10}
+  POSTGRES_MIN_CONNS: ${POSTGRES_MIN_CONNS:-2}
+
+# Готовая схема — предусловие для запуска процессов: БД должна отвечать,
+# а миграции успешно завершиться.
+x-schema-ready: &schema-ready
+  postgres:
+    condition: service_healthy
+  migrate:
+    condition: service_completed_successfully
+
+x-go-build: &go-build
+  context: .
+  dockerfile: deployments/Dockerfile
+
+x-hardening: &hardening
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  # ------------------------------------------------------------------------
+  # PostgreSQL — единственное хранилище приложения.
+  # Для приложения это присоединённый ресурс: оно знает о нём только DSN,
+  # поэтому локальный контейнер заменяется на управляемый кластер
+  # изменением одной переменной окружения (фактор IV).
+  # ------------------------------------------------------------------------
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sentinel}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sentinel}
+      POSTGRES_DB: ${POSTGRES_DB:-sentinel}
+      # Явная локаль и кодировка: иначе БД зависит от настроек хоста,
+      # и сортировка строк в проде может отличаться от локальной.
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      # Порт наружу нужен только для подключения клиентом с хоста
+      # (psql, pgAdmin) и для локального запуска процессов без контейнеров.
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sentinel} -d ${POSTGRES_DB:-sentinel}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    networks: [sentinel]
+    restart: unless-stopped
+
+  # ------------------------------------------------------------------------
+  # Миграции — отдельный одноразовый процесс, а не часть старта приложения
+  # (фактор XII). api и worker ждут его успешного завершения, поэтому не могут
+  # подняться на схеме, которой ещё нет. В код приложения прогон миграций
+  # не встроен намеренно: иначе несколько одновременно поднимающихся
+  # экземпляров начали бы менять схему наперегонки.
+  # ------------------------------------------------------------------------
+  migrate:
+    image: migrate/migrate:v4.18.1
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./internal/infra/db/postgres/migrations:/migrations:ro
+    command: ["-path=/migrations", "-database", *database-url, "up"]
+    networks: [sentinel]
+    restart: "no"
+
+  # ------------------------------------------------------------------------
+  # HTTP API. Stateless: сессий не хранит, на диск не пишет, поэтому
+  # экземпляров может быть сколько угодно за балансировщиком (факторы VI, VIII).
+  # ------------------------------------------------------------------------
+  api:
+    build:
+      <<: *go-build
+      args:
+        SERVICE: api
+        VERSION: ${APP_VERSION:-dev}
+    depends_on: *schema-ready
+    environment:
+      <<: [*app-env, *postgres-env]
+      DATABASE_URL: *database-url
+      HTTP_PORT: "8080"
+      HTTP_CORS_ALLOWED_ORIGINS: ${HTTP_CORS_ALLOWED_ORIGINS:-*}
+      HTTP_SHUTDOWN_TIMEOUT: ${HTTP_SHUTDOWN_TIMEOUT:-15s}
+      # Секрет обязателен и не имеет значения по умолчанию: он часть
+      # окружения, а не кода. Без .env процесс не стартует намеренно.
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?AUTH_JWT_SECRET is required - run `make env` or `cp .env.example .env`}
+      AUTH_TOKEN_TTL: ${AUTH_TOKEN_TTL:-24h}
+      AUTH_BCRYPT_COST: ${AUTH_BCRYPT_COST:-10}
+    ports:
+      - "${API_PORT:-8081}:8080"
+    healthcheck:
+      # /healthz, а не /readyz: проверка живости не должна зависеть от БД,
+      # иначе кратковременная недоступность БД вызовет перезапуск контейнера.
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    # Чуть больше HTTP_SHUTDOWN_TIMEOUT: процесс успевает доиграть активные
+    # запросы по SIGTERM и выйти сам, без SIGKILL (фактор IX).
+    stop_grace_period: 20s
+    <<: *hardening
+    networks: [sentinel]
+    restart: unless-stopped
+
+  # ------------------------------------------------------------------------
+  # Воркер проверок. Второй тип процесса из той же кодовой базы.
+  # Масштабируется горизонтально без координатора и выбора лидера:
+  #   docker compose up -d --scale worker=3
+  # Мониторы разбираются запросом с FOR UPDATE SKIP LOCKED, поэтому одна цель
+  # физически не может достаться двум воркерам (фактор VIII).
+  # ------------------------------------------------------------------------
+  worker:
+    build:
+      <<: *go-build
+      args:
+        SERVICE: worker
+        VERSION: ${APP_VERSION:-dev}
+    depends_on: *schema-ready
+    environment:
+      <<: [*app-env, *postgres-env]
+      DATABASE_URL: *database-url
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-8}
+      WORKER_BATCH_SIZE: ${WORKER_BATCH_SIZE:-50}
+      WORKER_POLL_INTERVAL: ${WORKER_POLL_INTERVAL:-1s}
+      WORKER_SHUTDOWN_TIMEOUT: ${WORKER_SHUTDOWN_TIMEOUT:-30s}
+      WORKER_USER_AGENT: ${WORKER_USER_AGENT:-SentinelUptimeBot/1.0}
+      WORKER_MAX_RESPONSE_BYTES: ${WORKER_MAX_RESPONSE_BYTES:-65536}
+      WORKER_MAX_REDIRECTS: ${WORKER_MAX_REDIRECTS:-3}
+      # true превращает сервис в инструмент сканирования внутренней сети,
+      # поэтому конфигурация запрещает это значение при APP_ENV=production.
+      WORKER_ALLOW_PRIVATE_TARGETS: ${WORKER_ALLOW_PRIVATE_TARGETS:-false}
+    stop_grace_period: 35s
+    <<: *hardening
+    networks: [sentinel]
+    restart: unless-stopped
+
+  # ------------------------------------------------------------------------
+  # Фронтенд: nginx раздаёт статику и проксирует /api в api, поэтому браузер
+  # работает с одним origin. Здесь же в следующем задании появится upstream
+  # с несколькими экземплярами api.
+  # ------------------------------------------------------------------------
+  web:
+    build:
+      context: .
+      dockerfile: deployments/Dockerfile.web
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    <<: *hardening
+    networks: [sentinel]
+    restart: unless-stopped
+
+  # ------------------------------------------------------------------------
+  # Одноразовый административный процесс: очистка истории проверок.
+  # Вместе с остальными не поднимается (profile tools), запускается командой
+  #   docker compose run --rm cleanup     (или make cleanup)
+  # В кластере это тот же образ, запущенный как CronJob (фактор XII).
+  # ------------------------------------------------------------------------
+  cleanup:
+    build:
+      <<: *go-build
+      args:
+        SERVICE: cleanup
+        VERSION: ${APP_VERSION:-dev}
+    profiles: ["tools"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      <<: [*app-env, *postgres-env]
+      DATABASE_URL: *database-url
+      RETENTION_CHECK_DAYS: ${RETENTION_CHECK_DAYS:-30}
+      RETENTION_BATCH_SIZE: ${RETENTION_BATCH_SIZE:-10000}
+    <<: *hardening
+    networks: [sentinel]
+    restart: "no"
+
+volumes:
+  pgdata:
+
+networks:
+  sentinel:
+    driver: bridge

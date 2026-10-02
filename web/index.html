@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sentinel — мониторинг доступности</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+    <div class="topbar__brand">
+        <span class="dot dot--up"></span>
+        <strong>Sentinel</strong>
+        <span class="muted">uptime monitoring</span>
+    </div>
+    <div class="topbar__actions" id="session-actions" hidden>
+        <a id="status-page-link" class="link" href="#" target="_blank" rel="noopener">Публичная страница</a>
+        <span class="muted" id="session-email"></span>
+        <button class="btn btn--ghost" id="logout-btn" type="button">Выйти</button>
+    </div>
+</header>
+
+<main class="layout">
+    <!-- Экран аутентификации -->
+    <section class="card auth" id="auth-screen">
+        <h1 class="card__title" id="auth-title">Вход</h1>
+        <p class="muted" id="auth-subtitle">Войдите, чтобы управлять мониторами.</p>
+
+        <form id="auth-form" class="form" autocomplete="on">
+            <label class="field">
+                <span>Email</span>
+                <input type="email" name="email" required autocomplete="username" placeholder="you@example.com">
+            </label>
+            <label class="field">
+                <span>Пароль</span>
+                <input type="password" name="password" required minlength="8"
+                       autocomplete="current-password" placeholder="минимум 8 символов">
+            </label>
+            <button class="btn btn--primary" type="submit" id="auth-submit">Войти</button>
+        </form>
+
+        <p class="muted">
+            <span id="auth-switch-text">Нет аккаунта?</span>
+            <button class="link" type="button" id="auth-switch">Зарегистрироваться</button>
+        </p>
+    </section>
+
+    <!-- Основной экран -->
+    <section id="app-screen" hidden>
+        <div class="toolbar">
+            <h1 class="toolbar__title">Мониторы</h1>
+            <div class="toolbar__right">
+                <button class="btn btn--ghost" type="button" id="refresh-btn">Обновить</button>
+                <button class="btn btn--primary" type="button" id="new-monitor-btn">Добавить монитор</button>
+            </div>
+        </div>
+
+        <!-- Форма создания/редактирования -->
+        <section class="card" id="monitor-form-card" hidden>
+            <h2 class="card__title" id="monitor-form-title">Новый монитор</h2>
+            <form id="monitor-form" class="form form--grid">
+                <input type="hidden" name="id">
+                <label class="field">
+                    <span>Название</span>
+                    <input type="text" name="name" required maxlength="100" placeholder="API продакшена">
+                </label>
+                <label class="field field--wide">
+                    <span>URL</span>
+                    <input type="url" name="target" required placeholder="https://example.com/health">
+                </label>
+                <label class="field">
+                    <span>Метод</span>
+                    <select name="method">
+                        <option value="GET">GET</option>
+                        <option value="HEAD">HEAD</option>
+                        <option value="OPTIONS">OPTIONS</option>
+                    </select>
+                </label>
+                <label class="field">
+                    <span>Интервал, с</span>
+                    <input type="number" name="interval_seconds" min="10" max="86400" value="60">
+                </label>
+                <label class="field">
+                    <span>Таймаут, с</span>
+                    <input type="number" name="timeout_seconds" min="1" max="120" value="10">
+                </label>
+                <label class="field">
+                    <span>Ожидаемый код</span>
+                    <input type="number" name="expected_status" min="100" max="599" value="200">
+                </label>
+                <label class="field">
+                    <span>Падений до инцидента</span>
+                    <input type="number" name="failure_threshold" min="1" max="10" value="2">
+                </label>
+                <label class="field field--checkbox">
+                    <input type="checkbox" name="is_public">
+                    <span>Показывать на публичной статус-странице</span>
+                </label>
+                <div class="form__actions">
+                    <button class="btn btn--primary" type="submit" id="monitor-submit">Создать</button>
+                    <button class="btn btn--ghost" type="button" id="monitor-cancel">Отмена</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Список мониторов -->
+        <section class="card">
+            <table class="table" id="monitors-table">
+                <thead>
+                <tr>
+                    <th>Статус</th>
+                    <th>Название</th>
+                    <th>Цель</th>
+                    <th>Интервал</th>
+                    <th>Последняя проверка</th>
+                    <th>Публичный</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody id="monitors-body"></tbody>
+            </table>
+            <p class="muted empty" id="monitors-empty" hidden>
+                Мониторов пока нет. Добавьте первый — проверка начнётся в течение нескольких секунд.
+            </p>
+        </section>
+
+        <!-- Детали монитора -->
+        <section class="card" id="detail-card" hidden>
+            <div class="toolbar">
+                <h2 class="card__title" id="detail-title">Монитор</h2>
+                <button class="btn btn--ghost" type="button" id="detail-close">Закрыть</button>
+            </div>
+
+            <div class="stats" id="detail-stats"></div>
+
+            <h3 class="section-title">Аптайм по часам (24 часа)</h3>
+            <div class="chart" id="detail-chart"></div>
+
+            <h3 class="section-title">Инциденты</h3>
+            <table class="table table--compact">
+                <thead>
+                <tr>
+                    <th>Начало</th>
+                    <th>Длительность</th>
+                    <th>Причина</th>
+                </tr>
+                </thead>
+                <tbody id="detail-incidents"></tbody>
+            </table>
+            <p class="muted empty" id="detail-incidents-empty" hidden>Инцидентов не было.</p>
+
+            <h3 class="section-title">Последние проверки</h3>
+            <table class="table table--compact">
+                <thead>
+                <tr>
+                    <th>Время</th>
+                    <th>Результат</th>
+                    <th>Код</th>
+                    <th>Задержка</th>
+                    <th>Ошибка</th>
+                </tr>
+                </thead>
+                <tbody id="detail-checks"></tbody>
+            </table>
+        </section>
+    </section>
+</main>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="api.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

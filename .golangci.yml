@@ -1,0 +1,122 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: standard
+  enable:
+    # Корректность.
+    - bodyclose
+    - contextcheck
+    - durationcheck
+    - errorlint
+    - exhaustive
+    - nilerr
+    - noctx
+    - rowserrcheck
+    - sqlclosecheck
+    - wrapcheck
+
+    # Читаемость и структура.
+    - cyclop
+    - decorder
+    - dupl
+    - errname
+    - funlen
+    - gochecknoglobals
+    - goconst
+    - gocritic
+    - godot
+    - lll
+    - mnd
+    - nestif
+    - nlreturn
+    - nolintlint
+    - revive
+    - unconvert
+    - unparam
+    - whitespace
+
+    # Безопасность.
+    - gosec
+
+  settings:
+    cyclop:
+      max-complexity: 12
+
+    funlen:
+      lines: 80
+      statements: 50
+
+    dupl:
+      threshold: 150
+
+    lll:
+      line-length: 125
+
+    mnd:
+      ignored-numbers:
+        - "0"
+        - "1"
+        - "2"
+        - "100"
+
+    exhaustive:
+      default-signifies-exhaustive: true
+
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+      allow-unused: false
+
+    wrapcheck:
+      ignore-sigs:
+        - .Execute(
+        - .WithTx(
+        - func (*github.com/St1lon/sentinel/
+
+    revive:
+      rules:
+        - name: exported
+        - name: package-comments
+        - name: error-strings
+        - name: context-as-argument
+        - name: indent-error-flow
+
+    gochecknoglobals: {}
+
+  exclusions:
+    rules:
+      # В тестах допустимы длинные табличные функции, магические числа
+      # и глобальные фикстуры.
+      - path: _test\.go
+        linters:
+          - funlen
+          - dupl
+          - mnd
+          - gochecknoglobals
+          - lll
+          - goconst
+          - wrapcheck
+
+      # Таблица трансляции ошибок — это данные, а не код.
+      - path: internal/transport/http/apierrors/apierrors\.go
+        linters:
+          - gochecknoglobals
+
+      # Список запрещённых сетей — константные данные уровня пакета.
+      - path: internal/infra/prober/guard\.go
+        linters:
+          - gochecknoglobals
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/St1lon/sentinel

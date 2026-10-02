@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Статус сервисов</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="status-body">
+<main class="layout layout--narrow">
+    <section class="card status-header" id="status-header">
+        <span class="dot" id="overall-dot"></span>
+        <div>
+            <h1 class="card__title" id="overall-title">Загрузка…</h1>
+            <p class="muted" id="overall-subtitle"></p>
+        </div>
+    </section>
+
+    <section id="services"></section>
+
+    <section class="card" id="incidents-card" hidden>
+        <h2 class="card__title">История инцидентов</h2>
+        <table class="table table--compact">
+            <thead>
+            <tr>
+                <th>Сервис</th>
+                <th>Начало</th>
+                <th>Длительность</th>
+                <th>Причина</th>
+            </tr>
+            </thead>
+            <tbody id="incidents-body"></tbody>
+        </table>
+    </section>
+
+    <p class="muted center" id="status-error" hidden></p>
+    <footer class="footer muted">Обновляется автоматически каждую минуту.</footer>
+</main>
+
+<script src="api.js"></script>
+<script src="status.js"></script>
+</body>
+</html>

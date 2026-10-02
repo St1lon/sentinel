@@ -1,0 +1,20 @@
+# Конфигурация конкретного окружения — не в репозитории.
+.env
+.env.local
+
+# Артефакты сборки.
+/bin/
+/out/
+*.exe
+*.test
+coverage.out
+coverage.html
+
+# Редакторы и ОС.
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Архив с решением.
+*.zip

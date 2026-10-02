@@ -1,0 +1,139 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Отменяем предыдущий прогон той же ветки: смысла проверять устаревший
+# коммит нет, а раннеры не бесплатные.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GO_VERSION: "1.24"
+
+jobs:
+  lint:
+    name: Линтер
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.64.8
+          args: --build-tags=integration --timeout=5m
+
+  test:
+    name: Юнит-тесты
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: go vet
+        run: go vet ./...
+
+      # Детектор гонок обязателен: в приложении два конкурентных места —
+      # пул проверок воркера и обработка HTTP-запросов.
+      - name: Тесты с детектором гонок
+        run: go test -race -coverprofile=coverage.out ./...
+
+      - name: Покрытие
+        run: go tool cover -func=coverage.out | tail -1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.out
+
+  integration:
+    name: Интеграционные тесты
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      # testcontainers поднимает PostgreSQL сам: отдельный services-блок
+      # не нужен, а тесты одинаково работают локально и в CI.
+      - name: Интеграционные тесты
+        run: go test -tags=integration -count=1 -timeout=10m ./internal/integrationtests/...
+
+  build:
+    name: Сборка образов
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    strategy:
+      matrix:
+        service: [api, worker, cleanup]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Собрать образ ${{ matrix.service }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deployments/Dockerfile
+          build-args: |
+            SERVICE=${{ matrix.service }}
+            VERSION=${{ github.sha }}
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  compose-smoke:
+    name: Проверка окружения целиком
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Подготовить окружение
+        run: |
+          cp .env.example .env
+          echo "AUTH_JWT_SECRET=ci-secret-value-at-least-32-characters" >> .env
+
+      - name: Поднять стек
+        run: docker compose up --build -d
+
+      - name: Дождаться готовности API
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8081/readyz > /dev/null; then
+              echo "api готов"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "api не поднялся"
+          docker compose logs --tail=100
+          exit 1
+
+      - name: Прогнать базовый сценарий через API
+        run: bash scripts/smoke.sh http://localhost:8081
+
+      - name: Логи при падении
+        if: failure()
+        run: docker compose logs --tail=200
+
+      - name: Остановить стек
+        if: always()
+        run: docker compose down -v
