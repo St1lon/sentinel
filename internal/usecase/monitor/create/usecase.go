@@ -11,14 +11,19 @@ import (
 
 type Usecase struct {
 	monitors MonitorRepo
+	guard    TargetGuard
 }
 
-func NewUsecase(monitors MonitorRepo) *Usecase {
-	return &Usecase{monitors: monitors}
+func NewUsecase(monitors MonitorRepo, guard TargetGuard) *Usecase {
+	return &Usecase{monitors: monitors, guard: guard}
 }
 
 func (uc *Usecase) Execute(ctx context.Context, req *Request) (*domain.Monitor, error) {
 	if err := req.validate(); err != nil {
+		return nil, err
+	}
+
+	if err := uc.guard.CheckTarget(req.Target); err != nil {
 		return nil, err
 	}
 

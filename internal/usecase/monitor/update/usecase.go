@@ -11,16 +11,25 @@ import (
 type Usecase struct {
 	monitors  MonitorRepo
 	incidents IncidentRepo
+	guard     TargetGuard
 	tx        common.TxManager
 }
 
-func NewUsecase(monitors MonitorRepo, incidents IncidentRepo, tx common.TxManager) *Usecase {
-	return &Usecase{monitors: monitors, incidents: incidents, tx: tx}
+func NewUsecase(
+	monitors MonitorRepo, incidents IncidentRepo, guard TargetGuard, tx common.TxManager,
+) *Usecase {
+	return &Usecase{monitors: monitors, incidents: incidents, guard: guard, tx: tx}
 }
 
 func (uc *Usecase) Execute(ctx context.Context, req *Request) (*domain.Monitor, error) {
 	if err := req.validate(); err != nil {
 		return nil, err
+	}
+
+	if req.Target != nil {
+		if err := uc.guard.CheckTarget(*req.Target); err != nil {
+			return nil, err
+		}
 	}
 
 	var updated *domain.Monitor

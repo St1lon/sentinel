@@ -50,14 +50,18 @@ type AuthConfig struct {
 }
 
 type WorkerConfig struct {
-	Concurrency         int           `env:"WORKER_CONCURRENCY"           envDefault:"8"  validate:"min=1,max=1024"`
-	BatchSize           int           `env:"WORKER_BATCH_SIZE"            envDefault:"50"  validate:"min=1,max=1000"`
-	PollInterval        time.Duration `env:"WORKER_POLL_INTERVAL"         envDefault:"1s"  validate:"min=100ms"`
-	ShutdownTimeout     time.Duration `env:"WORKER_SHUTDOWN_TIMEOUT"      envDefault:"30s" validate:"min=1s"`
-	UserAgent           string        `env:"WORKER_USER_AGENT"            envDefault:"SentinelUptimeBot/1.0" validate:"required"`
-	MaxResponseBytes    int64         `env:"WORKER_MAX_RESPONSE_BYTES"    envDefault:"65536" validate:"min=0"`
-	MaxRedirects        int           `env:"WORKER_MAX_REDIRECTS"         envDefault:"3"   validate:"min=0,max=10"`
-	AllowPrivateTargets bool          `env:"WORKER_ALLOW_PRIVATE_TARGETS" envDefault:"false"`
+	Concurrency      int           `env:"WORKER_CONCURRENCY"           envDefault:"8"  validate:"min=1,max=1024"`
+	BatchSize        int           `env:"WORKER_BATCH_SIZE"            envDefault:"50"  validate:"min=1,max=1000"`
+	PollInterval     time.Duration `env:"WORKER_POLL_INTERVAL"         envDefault:"1s"  validate:"min=100ms"`
+	ShutdownTimeout  time.Duration `env:"WORKER_SHUTDOWN_TIMEOUT"      envDefault:"30s" validate:"min=1s"`
+	UserAgent        string        `env:"WORKER_USER_AGENT"            envDefault:"SentinelUptimeBot/1.0" validate:"required"`
+	MaxResponseBytes int64         `env:"WORKER_MAX_RESPONSE_BYTES"    envDefault:"65536" validate:"min=0"`
+	MaxRedirects     int           `env:"WORKER_MAX_REDIRECTS"         envDefault:"3"   validate:"min=0,max=10"`
+}
+
+
+type TargetsConfig struct {
+	AllowPrivate bool `env:"ALLOW_PRIVATE_TARGETS" envDefault:"false"`
 }
 
 type RetentionConfig struct {
@@ -71,6 +75,7 @@ type APIConfig struct {
 	HTTP     HTTPConfig
 	Postgres PostgresConfig
 	Auth     AuthConfig
+	Targets  TargetsConfig
 }
 
 type WorkerProcessConfig struct {
@@ -78,6 +83,7 @@ type WorkerProcessConfig struct {
 	Log      LogConfig
 	Postgres PostgresConfig
 	Worker   WorkerConfig
+	Targets  TargetsConfig
 }
 
 type CleanupConfig struct {
@@ -109,6 +115,10 @@ func LoadAPIConfig(validate *validator.Validate) (*APIConfig, error) {
 		return nil, err
 	}
 
+	if err := checkTargets(&cfg.App, &cfg.Targets); err != nil {
+		return nil, err
+	}
+
 	return cfg, nil
 }
 
@@ -129,11 +139,8 @@ func LoadWorkerConfig(validate *validator.Validate) (*WorkerProcessConfig, error
 		)
 	}
 
-	if cfg.App.Env == envProduction && cfg.Worker.AllowPrivateTargets {
-		return nil, fmt.Errorf(
-			"%w: WORKER_ALLOW_PRIVATE_TARGETS must be false in production",
-			errInvalidConfig,
-		)
+	if err := checkTargets(&cfg.App, &cfg.Targets); err != nil {
+		return nil, err
 	}
 
 	return cfg, nil

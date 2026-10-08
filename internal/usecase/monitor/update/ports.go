@@ -15,3 +15,8 @@ type MonitorRepo interface {
 type IncidentRepo interface {
 	ResolveOpen(ctx context.Context, monitorID string, resolvedAt time.Time) error
 }
+
+// TargetGuard — политика допустимых целей, та же, что при создании монитора.
+type TargetGuard interface {
+	CheckTarget(target string) error
+}

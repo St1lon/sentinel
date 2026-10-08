@@ -10,6 +10,7 @@ import (
 	"github.com/St1lon/sentinel/internal/infra/auth"
 	"github.com/St1lon/sentinel/internal/infra/db/postgres"
 	"github.com/St1lon/sentinel/internal/infra/db/postgres/repository"
+	"github.com/St1lon/sentinel/internal/infra/prober"
 	transporthttp "github.com/St1lon/sentinel/internal/transport/http"
 	"github.com/St1lon/sentinel/internal/transport/http/handlers"
 	loginuser "github.com/St1lon/sentinel/internal/usecase/auth/login"
@@ -47,6 +48,7 @@ func BuildAPI(ctx context.Context, cfg *config.APIConfig, logger *slog.Logger) (
 
 	hasher := auth.NewBcryptHasher(cfg.Auth.BcryptCost)
 	tokens := auth.NewJWTIssuer(cfg.Auth.JWTSecret, cfg.Auth.TokenTTL, cfg.Auth.Issuer)
+	targetGuard := prober.NewGuard(cfg.Targets.AllowPrivate)
 
 	httpHandlers := handlers.New(handlers.Deps{
 		Logger:    logger,
@@ -58,10 +60,10 @@ func BuildAPI(ctx context.Context, cfg *config.APIConfig, logger *slog.Logger) (
 		Login:       loginuser.NewUsecase(users, hasher, tokens),
 		CurrentUser: getuser.NewUsecase(users),
 
-		CreateMonitor: createmonitor.NewUsecase(monitors),
+		CreateMonitor: createmonitor.NewUsecase(monitors, targetGuard),
 		ListMonitors:  listmonitors.NewUsecase(monitors),
 		GetMonitor:    getmonitor.NewUsecase(monitors),
-		UpdateMonitor: updatemonitor.NewUsecase(monitors, incidents, txManager),
+		UpdateMonitor: updatemonitor.NewUsecase(monitors, incidents, targetGuard, txManager),
 		DeleteMonitor: deletemonitor.NewUsecase(monitors),
 		MonitorStats:  monitorstats.NewUsecase(monitors, checks),
 		ListChecks:    listchecks.NewUsecase(monitors, checks),

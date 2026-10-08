@@ -39,6 +39,14 @@ func NewGuard(allowPrivate bool) *Guard {
 	return &Guard{allowPrivate: allowPrivate}
 }
 
+// CheckTarget — проверка без разобранного URL, для слоя usecase:
+// монитор на запрещённый адрес отклоняется сразу при создании, а не висит в down.
+func (g *Guard) CheckTarget(raw string) error {
+	_, err := g.CheckURL(raw)
+
+	return err
+}
+
 func (g *Guard) CheckURL(raw string) (*url.URL, error) {
 	parsed, err := url.Parse(strings.TrimSpace(raw))
 	if err != nil {

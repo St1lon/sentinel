@@ -28,6 +28,19 @@ func (s *repoStub) Create(_ context.Context, monitor *domain.Monitor) error {
 	return nil
 }
 
+type guardStub struct {
+	err   error
+	got   string
+	calls int
+}
+
+func (s *guardStub) CheckTarget(target string) error {
+	s.calls++
+	s.got = target
+
+	return s.err
+}
+
 func ptr[T any](value T) *T {
 	return &value
 }
@@ -45,7 +58,7 @@ func TestExecute_AppliesDefaults(t *testing.T) {
 
 	repo := &repoStub{}
 
-	monitor, err := createmonitor.NewUsecase(repo).Execute(context.Background(), validRequest())
+	monitor, err := createmonitor.NewUsecase(repo, &guardStub{}).Execute(context.Background(), validRequest())
 	require.NoError(t, err)
 
 	require.Equal(t, "API продакшена", monitor.Name, "имя обрезается по краям")
@@ -68,7 +81,7 @@ func TestExecute_PausedMonitorStartsPaused(t *testing.T) {
 	req := validRequest()
 	req.Paused = true
 
-	monitor, err := createmonitor.NewUsecase(&repoStub{}).Execute(context.Background(), req)
+	monitor, err := createmonitor.NewUsecase(&repoStub{}, &guardStub{}).Execute(context.Background(), req)
 	require.NoError(t, err)
 	require.Equal(t, domain.MonitorStatusPaused, monitor.Status)
 }
@@ -81,7 +94,7 @@ func TestExecute_RejectsTimeoutNotBelowInterval(t *testing.T) {
 	req.IntervalSeconds = ptr(30)
 	req.TimeoutSeconds = ptr(30)
 
-	_, err := createmonitor.NewUsecase(repo).Execute(context.Background(), req)
+	_, err := createmonitor.NewUsecase(repo, &guardStub{}).Execute(context.Background(), req)
 
 	require.ErrorIs(t, err, domain.ErrTimeoutExceedsInterval)
 	require.Zero(t, repo.calls, "невалидный запрос не доходит до репозитория")
@@ -151,7 +164,7 @@ func TestExecute_RejectsOutOfRangeValues(t *testing.T) {
 			req := validRequest()
 			testCase.mutate(req)
 
-			_, err := createmonitor.NewUsecase(&repoStub{}).Execute(context.Background(), req)
+			_, err := createmonitor.NewUsecase(&repoStub{}, &guardStub{}).Execute(context.Background(), req)
 			require.ErrorIs(t, err, testCase.want)
 		})
 	}
@@ -162,6 +175,32 @@ func TestExecute_PropagatesNameConflict(t *testing.T) {
 
 	repo := &repoStub{err: domain.ErrMonitorNameTaken}
 
-	_, err := createmonitor.NewUsecase(repo).Execute(context.Background(), validRequest())
+	_, err := createmonitor.NewUsecase(repo, &guardStub{}).Execute(context.Background(), validRequest())
 	require.ErrorIs(t, err, domain.ErrMonitorNameTaken)
+}
+
+func TestExecute_RejectsTargetForbiddenByGuard(t *testing.T) {
+	t.Parallel()
+
+	repo := &repoStub{}
+	guard := &guardStub{err: domain.ErrTargetNotAllowed}
+
+	_, err := createmonitor.NewUsecase(repo, guard).Execute(context.Background(), validRequest())
+
+	require.ErrorIs(t, err, domain.ErrTargetNotAllowed)
+	require.Zero(t, repo.calls, "запрещённая цель не должна попадать в базу")
+	require.Equal(t, "https://example.com/health", guard.got, "в guard уходит нормализованный URL")
+}
+
+func TestExecute_GuardCalledAfterValidation(t *testing.T) {
+	t.Parallel()
+
+	guard := &guardStub{}
+	req := validRequest()
+	req.Target = "ftp://example.com"
+
+	_, err := createmonitor.NewUsecase(&repoStub{}, guard).Execute(context.Background(), req)
+
+	require.ErrorIs(t, err, domain.ErrInvalidTarget)
+	require.Zero(t, guard.calls, "до guard дело не доходит, если URL отсеян валидацией")
 }

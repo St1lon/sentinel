@@ -37,7 +37,7 @@ func BuildWorker(ctx context.Context, cfg *config.WorkerProcessConfig, logger *s
 		UserAgent:        cfg.Worker.UserAgent,
 		MaxResponseBytes: cfg.Worker.MaxResponseBytes,
 		MaxRedirects:     cfg.Worker.MaxRedirects,
-		AllowPrivate:     cfg.Worker.AllowPrivateTargets,
+		AllowPrivate:     cfg.Targets.AllowPrivate,
 	})
 
 	probeWorker := worker.New(

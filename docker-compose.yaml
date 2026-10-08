@@ -110,7 +110,7 @@ services:
       WORKER_USER_AGENT: ${WORKER_USER_AGENT:-SentinelUptimeBot/1.0}
       WORKER_MAX_RESPONSE_BYTES: ${WORKER_MAX_RESPONSE_BYTES:-65536}
       WORKER_MAX_REDIRECTS: ${WORKER_MAX_REDIRECTS:-3}
-      WORKER_ALLOW_PRIVATE_TARGETS: ${WORKER_ALLOW_PRIVATE_TARGETS:-false}
+      ALLOW_PRIVATE_TARGETS: ${ALLOW_PRIVATE_TARGETS:-false}
     stop_grace_period: 35s
     <<: *hardening
     networks: [sentinel]

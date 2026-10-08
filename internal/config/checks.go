@@ -10,7 +10,7 @@ const (
 	envProduction = "production"
 
 	exampleJWTSecret = "change-me-in-production-at-least-32-chars"
-	
+
 	minProductionJWTSecretLength = 44
 )
 
@@ -88,6 +88,14 @@ func checkAuth(app *AppConfig, cfg *AuthConfig) error {
 			"%w: AUTH_JWT_SECRET looks like a placeholder (contains %q) and must not be used in production",
 			errInvalidConfig, marker,
 		)
+	}
+
+	return nil
+}
+
+func checkTargets(app *AppConfig, cfg *TargetsConfig) error {
+	if app.Env == envProduction && cfg.AllowPrivate {
+		return fmt.Errorf("%w: ALLOW_PRIVATE_TARGETS must be false in production", errInvalidConfig)
 	}
 
 	return nil

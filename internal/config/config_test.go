@@ -144,10 +144,10 @@ func TestLoadWorkerConfig_PoolSmallerThanConcurrencyRejected(t *testing.T) {
 func TestLoadWorkerConfig_PrivateTargetsForbiddenInProduction(t *testing.T) {
 	t.Setenv("DATABASE_URL", validDSN)
 	t.Setenv("APP_ENV", "production")
-	t.Setenv("WORKER_ALLOW_PRIVATE_TARGETS", "true")
+	t.Setenv("ALLOW_PRIVATE_TARGETS", "true")
 
 	_, err := config.LoadWorkerConfig(config.NewValidator())
-	require.ErrorContains(t, err, "WORKER_ALLOW_PRIVATE_TARGETS")
+	require.ErrorContains(t, err, "ALLOW_PRIVATE_TARGETS")
 }
 
 func TestLoadWorkerConfig_Defaults(t *testing.T) {
@@ -158,7 +158,7 @@ func TestLoadWorkerConfig_Defaults(t *testing.T) {
 
 	require.Equal(t, 8, cfg.Worker.Concurrency)
 	require.Equal(t, 50, cfg.Worker.BatchSize)
-	require.False(t, cfg.Worker.AllowPrivateTargets)
+	require.False(t, cfg.Targets.AllowPrivate)
 }
 
 func TestLoadCleanupConfig_Defaults(t *testing.T) {
