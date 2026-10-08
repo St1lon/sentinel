@@ -55,13 +55,55 @@ func TestLoadAPIConfig_ShortSecretRejected(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestLoadAPIConfig_ExampleSecretRejectedInProduction(t *testing.T) {
+func TestLoadAPIConfig_ShortSecretRejectedInProduction(t *testing.T) {
 	setBaseEnv(t)
 	t.Setenv("APP_ENV", "production")
-	t.Setenv("AUTH_JWT_SECRET", "change-me-in-production-at-least-32-chars")
+	t.Setenv("AUTH_JWT_SECRET", "0123456789abcdef0123456789abcdef")
 
 	_, err := config.LoadAPIConfig(config.NewValidator())
-	require.ErrorContains(t, err, "must not be the example value")
+	require.ErrorContains(t, err, "at least 44 characters in production")
+}
+
+func TestLoadAPIConfig_PlaceholderSecretsRejectedInProduction(t *testing.T) {
+	// Все значения достаточной длины — отвергаются именно как заглушки.
+	placeholders := []string{
+		"change-me-in-production-at-least-32-chars-here",
+		"k8s-local-secret-at-least-32-characters-long",
+		"example-secret-value-for-the-application-dev",
+		"insecure-placeholder-secret-value-for-tests!!",
+		"TODO-replace-this-secret-before-going-to-prod",
+	}
+
+	for _, secret := range placeholders {
+		t.Run(secret, func(t *testing.T) {
+			setBaseEnv(t)
+			t.Setenv("APP_ENV", "production")
+			t.Setenv("AUTH_JWT_SECRET", secret)
+
+			_, err := config.LoadAPIConfig(config.NewValidator())
+			require.ErrorContains(t, err, "looks like a placeholder")
+		})
+	}
+}
+
+func TestLoadAPIConfig_GeneratedSecretAcceptedInProduction(t *testing.T) {
+	setBaseEnv(t)
+	t.Setenv("APP_ENV", "production")
+	// Результат `openssl rand -base64 32`.
+	t.Setenv("AUTH_JWT_SECRET", "jK8vQ2mZ4pR7tY1wB6nF3hL9sD5gX0cV8aU2eI4oP6M=")
+
+	cfg, err := config.LoadAPIConfig(config.NewValidator())
+	require.NoError(t, err)
+	require.Equal(t, "production", cfg.App.Env)
+}
+
+func TestLoadAPIConfig_PlaceholderAllowedOutsideProduction(t *testing.T) {
+	setBaseEnv(t)
+	t.Setenv("APP_ENV", "development")
+	t.Setenv("AUTH_JWT_SECRET", "k8s-local-secret-at-least-32-characters")
+
+	_, err := config.LoadAPIConfig(config.NewValidator())
+	require.NoError(t, err, "в локальном окружении заглушка допустима")
 }
 
 func TestLoadAPIConfig_UnknownEnvRejected(t *testing.T) {

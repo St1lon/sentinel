@@ -21,7 +21,7 @@ import (
 
 const (
 	startupTimeout = 90 * time.Second
-	postgresImage  = "postgres:17-alpine"
+	postgresImage  = "postgres:17.11-alpine"
 )
 
 var testPool *pgxpool.Pool

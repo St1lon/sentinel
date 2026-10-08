@@ -1,0 +1,45 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate
+  namespace: sentinel
+spec:
+  backoffLimit: 5
+  activeDeadlineSeconds: 300
+  template:
+    metadata:
+      labels:
+        app: migrate
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+      - image: postgres:17.11-alpine
+        name: wait-for-postgres
+        imagePullPolicy: IfNotPresent
+        command:
+        - sh
+        - -c
+        - until pg_isready -h postgres -p 5432 -U sentinel; do sleep 2; done
+      containers:
+      - image: migrate/migrate:v4.18.1
+        name: migrate
+        imagePullPolicy: IfNotPresent
+        args:
+        - -path=/migrations
+        - -database=$(DATABASE_URL)
+        - up
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: sentinel-secrets
+              key: DATABASE_URL
+        volumeMounts:
+        - name: migrations
+          mountPath: /migrations
+      volumes:
+      - name: migrations
+        configMap:
+          name: sentinel-migrations
+...

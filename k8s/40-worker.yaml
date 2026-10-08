@@ -1,0 +1,56 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: sentinel
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: worker
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      initContainers:
+      - image: postgres:17.11-alpine
+        name: wait-for-schema
+        imagePullPolicy: IfNotPresent
+        command:
+        - sh
+        - -c
+        - until psql "$DATABASE_URL" -c 'SELECT 1 FROM monitors LIMIT 1' >/dev/null 2>&1; do sleep 2; done
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: sentinel-secrets
+              key: DATABASE_URL
+      containers:
+      - image: sentinel/worker:dev
+        name: worker
+        imagePullPolicy: IfNotPresent
+        envFrom:
+        - configMapRef:
+            name: sentinel-config
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: sentinel-secrets
+              key: DATABASE_URL
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            memory: 128Mi
+      terminationGracePeriodSeconds: 35
+...

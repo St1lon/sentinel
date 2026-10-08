@@ -1,4 +1,4 @@
-FROM golang:1.24-alpine AS builder
+FROM golang:1.24.13-alpine3.23 AS builder
 
 WORKDIR /src
 
@@ -16,7 +16,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
         -o /out/app \
         ./cmd/${SERVICE}
 
-FROM alpine:3.21 AS runtime
+FROM alpine:3.23.3 AS runtime
 
 RUN apk add --no-cache ca-certificates tzdata \
     && adduser -D -u 10001 -h /app sentinel
