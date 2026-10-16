@@ -59,7 +59,6 @@ type WorkerConfig struct {
 	MaxRedirects     int           `env:"WORKER_MAX_REDIRECTS"         envDefault:"3"   validate:"min=0,max=10"`
 }
 
-
 type TargetsConfig struct {
 	AllowPrivate bool `env:"ALLOW_PRIVATE_TARGETS" envDefault:"false"`
 }
