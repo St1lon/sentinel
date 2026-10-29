@@ -23,6 +23,9 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 		Email:    body.Email,
 		Password: body.Password,
 	})
+
+	h.deps.Metrics.RegisterAttempt(err == nil)
+
 	if err != nil {
 		h.writeError(w, r, err)
 
@@ -49,6 +52,11 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 		Email:    body.Email,
 		Password: body.Password,
 	})
+
+	// Запросы, не дошедшие до use case (битый JSON), сюда не попадают:
+	// это ошибка протокола, её видно в метриках HTTP-слоя.
+	h.deps.Metrics.LoginAttempt(err == nil)
+
 	if err != nil {
 		h.writeError(w, r, err)
 

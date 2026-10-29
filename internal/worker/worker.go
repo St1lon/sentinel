@@ -17,6 +17,14 @@ type Prober interface {
 	Probe(ctx context.Context, monitor *domain.Monitor) (*domain.Check, error)
 }
 
+// ProbeMetrics — бизнес-метрики проверок. Снимаются здесь, а не в usecase:
+// воркер — драйвер, он уже отвечает за наблюдаемость цикла проверок.
+type ProbeMetrics interface {
+	ProbeRecorded(kind domain.MonitorKind, up bool, latency time.Duration)
+	IncidentOpened(kind domain.MonitorKind)
+	IncidentResolved(kind domain.MonitorKind)
+}
+
 type Options struct {
 	Concurrency  int
 	BatchSize    int
@@ -24,21 +32,30 @@ type Options struct {
 }
 
 type Worker struct {
-	lease  *leasemonitors.Usecase
-	record *recordprobe.Usecase
-	prober Prober
-	logger *slog.Logger
-	opts   Options
+	lease   *leasemonitors.Usecase
+	record  *recordprobe.Usecase
+	prober  Prober
+	metrics ProbeMetrics
+	logger  *slog.Logger
+	opts    Options
 }
 
 func New(
 	lease *leasemonitors.Usecase,
 	record *recordprobe.Usecase,
 	prober Prober,
+	metrics ProbeMetrics,
 	logger *slog.Logger,
 	opts Options,
 ) *Worker {
-	return &Worker{lease: lease, record: record, prober: prober, logger: logger, opts: opts}
+	return &Worker{
+		lease:   lease,
+		record:  record,
+		prober:  prober,
+		metrics: metrics,
+		logger:  logger,
+		opts:    opts,
+	}
 }
 
 func (w *Worker) Run(ctx context.Context) error {
@@ -122,7 +139,20 @@ func (w *Worker) checkOne(ctx context.Context, monitor *domain.Monitor) {
 		return
 	}
 
+	w.observe(monitor, check, result)
 	w.logStateChange(ctx, monitor, check, result)
+}
+
+func (w *Worker) observe(monitor *domain.Monitor, check *domain.Check, result *recordprobe.Result) {
+	w.metrics.ProbeRecorded(monitor.Kind, check.Up, time.Duration(check.LatencyMS)*time.Millisecond)
+
+	if result.Transition.OpenIncident {
+		w.metrics.IncidentOpened(monitor.Kind)
+	}
+
+	if result.Transition.CloseIncident {
+		w.metrics.IncidentResolved(monitor.Kind)
+	}
 }
 
 func (w *Worker) logStateChange(

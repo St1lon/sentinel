@@ -29,6 +29,10 @@ spec:
     metadata:
       labels:
         app: postgres
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9187"
+        prometheus.io/path: "/metrics"
     spec:
       containers:
       - image: postgres:17.11-alpine
@@ -80,6 +84,37 @@ spec:
             memory: 256Mi
           limits:
             memory: 512Mi
+
+      - image: quay.io/prometheuscommunity/postgres-exporter:v0.20.1
+        name: postgres-exporter
+        imagePullPolicy: IfNotPresent
+        args:
+        - --web.listen-address=:9187
+        ports:
+        - containerPort: 9187
+          name: metrics
+        env:
+        - name: DATA_SOURCE_NAME
+          valueFrom:
+            secretKeyRef:
+              name: sentinel-secrets
+              key: POSTGRES_EXPORTER_DSN
+        readinessProbe:
+          tcpSocket:
+            port: metrics
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 2
+          failureThreshold: 3
+          successThreshold: 1
+        resources:
+          requests:
+            cpu: 20m
+            memory: 32Mi
+          limits:
+            memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: false
   volumeClaimTemplates:
   - metadata:
       name: data

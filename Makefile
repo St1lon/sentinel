@@ -1,8 +1,11 @@
-.PHONY: help env tidy fmt lint test test-race test-cover test-integration build up up-scaled down logs ps migrate-up migrate-down cleanup demo
+.PHONY: help env tidy fmt lint test test-race test-cover test-integration build up up-scaled down logs ps migrate-up migrate-down cleanup demo metrics monitoring-up monitoring-down vm-ui
 
-GO      ?= go
-COMPOSE ?= docker compose
-API_URL ?= http://localhost:8081
+GO           ?= go
+COMPOSE      ?= docker compose
+API_URL      ?= http://localhost:8081
+METRICS_URL  ?= http://localhost:9091/metrics
+VM_RELEASE   ?= vm-single
+VM_NAMESPACE ?= monitoring
 
 help:
 	@echo "env              - создать .env из .env.example"
@@ -14,6 +17,10 @@ help:
 	@echo "migrate-down     - откатить последнюю миграцию"
 	@echo "cleanup          - одноразовый процесс очистки истории проверок"
 	@echo "demo             - создать демо-пользователя и несколько мониторов через API"
+	@echo "metrics          - бизнес-метрики api с поднятого окружения"
+	@echo "monitoring-up    - поставить Victoria Metrics в minikube (helm)"
+	@echo "monitoring-down  - снести Victoria Metrics"
+	@echo "vm-ui            - проброс порта к Victoria Metrics (vmui)"
 	@echo "build            - собрать бинарники локально"
 	@echo "test             - юнит-тесты"
 	@echo "test-race        - юнит-тесты с детектором гонок"
@@ -86,3 +93,22 @@ cleanup: env
 
 demo:
 	@bash scripts/demo.sh $(API_URL)
+
+metrics:
+	@curl -fsS $(METRICS_URL) | grep '^sentinel_' || \
+		echo "метрик нет: окружение не поднято или порт не проброшен (API_METRICS_PORT)"
+
+# Чарт ставится upgrade --install, чтобы цель была идемпотентной.
+monitoring-up:
+	helm repo add vm https://victoriametrics.github.io/helm-charts/
+	helm repo update vm
+	helm upgrade --install $(VM_RELEASE) vm/victoria-metrics-single \
+		--namespace $(VM_NAMESPACE) --create-namespace \
+		-f k8s/monitoring/vm-single-values.yaml --wait
+
+monitoring-down:
+	helm uninstall $(VM_RELEASE) --namespace $(VM_NAMESPACE)
+
+vm-ui:
+	@echo "vmui: http://localhost:8428/vmui"
+	kubectl port-forward svc/$(VM_RELEASE)-victoria-metrics-single-server -n $(VM_NAMESPACE) 8428:8428

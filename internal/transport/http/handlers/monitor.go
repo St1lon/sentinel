@@ -49,6 +49,8 @@ func (h *Handlers) CreateMonitor(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.deps.Metrics.MonitorCreated(monitor.Kind)
+
 	h.writeJSON(w, r, http.StatusCreated, mapper.Monitor(monitor))
 }
 
@@ -161,6 +163,8 @@ func (h *Handlers) DeleteMonitor(w http.ResponseWriter, r *http.Request) {
 
 		return
 	}
+
+	h.deps.Metrics.MonitorDeleted()
 
 	h.writeJSON(w, r, http.StatusNoContent, nil)
 }

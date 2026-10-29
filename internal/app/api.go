@@ -2,17 +2,22 @@ package app
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/St1lon/sentinel/internal/config"
 	"github.com/St1lon/sentinel/internal/infra/auth"
 	"github.com/St1lon/sentinel/internal/infra/db/postgres"
 	"github.com/St1lon/sentinel/internal/infra/db/postgres/repository"
+	"github.com/St1lon/sentinel/internal/infra/metrics"
 	"github.com/St1lon/sentinel/internal/infra/prober"
 	transporthttp "github.com/St1lon/sentinel/internal/transport/http"
 	"github.com/St1lon/sentinel/internal/transport/http/handlers"
+	transportmetrics "github.com/St1lon/sentinel/internal/transport/metrics"
 	loginuser "github.com/St1lon/sentinel/internal/usecase/auth/login"
 	registeruser "github.com/St1lon/sentinel/internal/usecase/auth/register"
 	listchecks "github.com/St1lon/sentinel/internal/usecase/check/list"
@@ -28,9 +33,10 @@ import (
 )
 
 type API struct {
-	server *transporthttp.Server
-	pool   *pgxpool.Pool
-	logger *slog.Logger
+	server        *transporthttp.Server
+	metricsServer *transportmetrics.Server
+	pool          *pgxpool.Pool
+	logger        *slog.Logger
 }
 
 func BuildAPI(ctx context.Context, cfg *config.APIConfig, logger *slog.Logger) (*API, error) {
@@ -39,6 +45,7 @@ func BuildAPI(ctx context.Context, cfg *config.APIConfig, logger *slog.Logger) (
 		return nil, err
 	}
 
+	registry := metrics.NewRegistry(ServiceAPI)
 	txManager := postgres.NewTxManager(pool)
 
 	users := repository.NewUserRepo(pool)
@@ -55,6 +62,7 @@ func BuildAPI(ctx context.Context, cfg *config.APIConfig, logger *slog.Logger) (
 		Version:   cfg.App.Version,
 		Env:       cfg.App.Env,
 		BodyLimit: cfg.HTTP.RequestBodyLimit,
+		Metrics:   metrics.NewBusiness(registry.Registerer()),
 
 		Register:    registeruser.NewUsecase(users, hasher, tokens),
 		Login:       loginuser.NewUsecase(users, hasher, tokens),
@@ -77,22 +85,37 @@ func BuildAPI(ctx context.Context, cfg *config.APIConfig, logger *slog.Logger) (
 		Handlers:       httpHandlers,
 		TokenParser:    tokens,
 		Logger:         logger,
+		Requests:       metrics.NewHTTP(registry.Registerer()),
 		AllowedOrigins: cfg.HTTP.CORSAllowedOrigins,
 	})
 
 	return &API{
-		server: transporthttp.NewServer(&cfg.HTTP, router, logger),
-		pool:   pool,
-		logger: logger,
+		server:        transporthttp.NewServer(&cfg.HTTP, router, logger),
+		metricsServer: transportmetrics.NewServer(&cfg.Metrics, registry.Handler(), logger),
+		pool:          pool,
+		logger:        logger,
 	}, nil
 }
 
+// Run поднимает два слушателя: публичный API и порт сбора метрик.
 func (a *API) Run() error {
-	return a.server.Run()
+	var group errgroup.Group
+
+	group.Go(a.server.Run)
+	group.Go(a.metricsServer.Run)
+
+	if err := group.Wait(); err != nil {
+		return fmt.Errorf("run api: %w", err)
+	}
+
+	return nil
 }
 
 func (a *API) Shutdown(ctx context.Context) error {
-	err := a.server.Shutdown(ctx)
+	err := errors.Join(
+		a.server.Shutdown(ctx),
+		a.metricsServer.Shutdown(ctx),
+	)
 
 	a.pool.Close()
 	a.logger.Info("database pool closed")

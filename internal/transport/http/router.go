@@ -21,6 +21,7 @@ type RouterDeps struct {
 	Handlers       *handlers.Handlers
 	TokenParser    middleware.TokenParser
 	Logger         *slog.Logger
+	Requests       middleware.RequestRecorder
 	AllowedOrigins []string
 }
 
@@ -29,6 +30,9 @@ func NewRouter(deps RouterDeps) http.Handler {
 
 	router.Use(chimiddleware.RequestID)
 	router.Use(chimiddleware.RealIP)
+	// Метрики стоят выше Recoverer: паника к этому моменту уже превращена
+	// в ответ 500, и запрос попадёт в метрику с настоящим кодом.
+	router.Use(middleware.Metrics(deps.Requests))
 	router.Use(chimiddleware.Recoverer)
 	router.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   deps.AllowedOrigins,

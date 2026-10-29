@@ -33,6 +33,10 @@ spec:
     metadata:
       labels:
         app: api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
     spec:
       initContainers:
       - image: postgres:17.11-alpine
@@ -55,6 +59,8 @@ spec:
         ports:
         - containerPort: 8080
           name: http
+        - containerPort: 9090
+          name: metrics
         envFrom:
         - configMapRef:
             name: sentinel-config

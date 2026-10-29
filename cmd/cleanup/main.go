@@ -23,7 +23,7 @@ func run() error {
 		return err
 	}
 
-	logger := app.NewLogger(&cfg.Log, &cfg.App, "sentinel-cleanup")
+	logger := app.NewLogger(&cfg.Log, &cfg.App, app.ServiceCleanup)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stop()

@@ -147,3 +147,15 @@ func (r *IncidentRepo) queryMany(ctx context.Context, query string, args ...any)
 
 	return incidents, nil
 }
+
+func (r *IncidentRepo) CountOpen(ctx context.Context) (int, error) {
+	const query = `SELECT count(*) FROM incidents WHERE resolved_at IS NULL`
+
+	var total int
+
+	if err := postgres.GetQuerier(ctx, r.pool).QueryRow(ctx, query).Scan(&total); err != nil {
+		return 0, fmt.Errorf("count open incidents: %w", err)
+	}
+
+	return total, nil
+}

@@ -117,3 +117,14 @@ func looksLikePlaceholder(secret string) (string, bool) {
 
 	return "", false
 }
+
+func checkMetrics(httpPort int, cfg *MetricsConfig) error {
+	if cfg.Port == httpPort {
+		return fmt.Errorf(
+			"%w: METRICS_PORT (%d) must differ from HTTP_PORT",
+			errInvalidConfig, cfg.Port,
+		)
+	}
+
+	return nil
+}

@@ -26,7 +26,6 @@ func NewLogger(logCfg *config.LogConfig, appCfg *config.AppConfig, service strin
 	)
 }
 
-
 func renameStandardKeys(groups []string, attr slog.Attr) slog.Attr {
 	if len(groups) > 0 {
 		return attr

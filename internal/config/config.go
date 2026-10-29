@@ -42,6 +42,22 @@ type HTTPConfig struct {
 	RequestBodyLimit   int64         `env:"HTTP_REQUEST_BODY_LIMIT"    envDefault:"65536" validate:"min=1024"`
 }
 
+// MetricsConfig — выделенный порт сбора метрик: эндпоинт без авторизации
+// не должен попадать в Service приложения.
+type MetricsConfig struct {
+	Port              int           `env:"METRICS_PORT"                envDefault:"9090"     validate:"min=1,max=65535"`
+	Path              string        `env:"METRICS_PATH"                envDefault:"/metrics" validate:"required,startswith=/"`
+	ReadHeaderTimeout time.Duration `env:"METRICS_READ_HEADER_TIMEOUT" envDefault:"5s"       validate:"min=100ms"`
+	ShutdownTimeout   time.Duration `env:"METRICS_SHUTDOWN_TIMEOUT"    envDefault:"5s"       validate:"min=1s"`
+}
+
+// MetricsPushConfig — куда разовая задача отдаёт свои метрики.
+// Пустой URL отключает отправку.
+type MetricsPushConfig struct {
+	URL     string        `env:"METRICS_PUSH_URL"     validate:"omitempty,url"`
+	Timeout time.Duration `env:"METRICS_PUSH_TIMEOUT" envDefault:"5s" validate:"min=100ms"`
+}
+
 type AuthConfig struct {
 	JWTSecret  string        `env:"AUTH_JWT_SECRET,required" validate:"required,min=32"`
 	TokenTTL   time.Duration `env:"AUTH_TOKEN_TTL"  envDefault:"24h" validate:"min=1m"`
@@ -57,6 +73,7 @@ type WorkerConfig struct {
 	UserAgent        string        `env:"WORKER_USER_AGENT"            envDefault:"SentinelUptimeBot/1.0" validate:"required"`
 	MaxResponseBytes int64         `env:"WORKER_MAX_RESPONSE_BYTES"    envDefault:"65536" validate:"min=0"`
 	MaxRedirects     int           `env:"WORKER_MAX_REDIRECTS"         envDefault:"3"   validate:"min=0,max=10"`
+	StatsInterval    time.Duration `env:"WORKER_STATS_INTERVAL"        envDefault:"15s" validate:"min=1s"`
 }
 
 type TargetsConfig struct {
@@ -75,6 +92,7 @@ type APIConfig struct {
 	Postgres PostgresConfig
 	Auth     AuthConfig
 	Targets  TargetsConfig
+	Metrics  MetricsConfig
 }
 
 type WorkerProcessConfig struct {
@@ -83,6 +101,7 @@ type WorkerProcessConfig struct {
 	Postgres PostgresConfig
 	Worker   WorkerConfig
 	Targets  TargetsConfig
+	Metrics  MetricsConfig
 }
 
 type CleanupConfig struct {
@@ -90,6 +109,7 @@ type CleanupConfig struct {
 	Log       LogConfig
 	Postgres  PostgresConfig
 	Retention RetentionConfig
+	Push      MetricsPushConfig
 }
 
 func NewValidator() *validator.Validate {
@@ -107,6 +127,10 @@ func LoadAPIConfig(validate *validator.Validate) (*APIConfig, error) {
 	}
 
 	if err := checkHTTP(&cfg.HTTP); err != nil {
+		return nil, err
+	}
+
+	if err := checkMetrics(cfg.HTTP.Port, &cfg.Metrics); err != nil {
 		return nil, err
 	}
 

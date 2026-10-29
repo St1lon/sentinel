@@ -274,3 +274,34 @@ func scanMonitor(row scanRow, monitor *domain.Monitor) error {
 		&monitor.LastCheckedAt, &monitor.NextCheckAt, &monitor.CreatedAt, &monitor.UpdatedAt,
 	)
 }
+
+func (r *MonitorRepo) CountByStatus(ctx context.Context) (map[domain.MonitorStatus]int, error) {
+	const query = `SELECT status, count(*) FROM monitors GROUP BY status`
+
+	rows, err := postgres.GetQuerier(ctx, r.pool).Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("count monitors by status: %w", err)
+	}
+	defer rows.Close()
+
+	counts := make(map[domain.MonitorStatus]int)
+
+	for rows.Next() {
+		var (
+			status domain.MonitorStatus
+			count  int
+		)
+
+		if err := rows.Scan(&status, &count); err != nil {
+			return nil, fmt.Errorf("scan monitor status count: %w", err)
+		}
+
+		counts[status] = count
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate monitor status counts: %w", err)
+	}
+
+	return counts, nil
+}

@@ -72,3 +72,19 @@ func (m *Monitor) Timeout() time.Duration {
 func (m *Monitor) Interval() time.Duration {
 	return time.Duration(m.IntervalSeconds) * time.Second
 }
+
+// FleetSummary — срез состояния всех мониторов: сколько их в каждом статусе
+// и сколько инцидентов открыто прямо сейчас.
+type FleetSummary struct {
+	ByStatus      map[MonitorStatus]int
+	OpenIncidents int
+}
+
+func KnownMonitorStatuses() []MonitorStatus {
+	return []MonitorStatus{
+		MonitorStatusPending,
+		MonitorStatusUp,
+		MonitorStatusDown,
+		MonitorStatusPaused,
+	}
+}

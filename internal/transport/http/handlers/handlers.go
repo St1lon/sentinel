@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/St1lon/sentinel/internal/domain"
 	registeruser "github.com/St1lon/sentinel/internal/usecase/auth/register"
 	listchecks "github.com/St1lon/sentinel/internal/usecase/check/list"
 	listincidents "github.com/St1lon/sentinel/internal/usecase/incident/list"
@@ -23,11 +24,22 @@ type Pinger interface {
 	Ping(ctx context.Context) error
 }
 
+// Metrics — бизнес-события, которые видно на границе HTTP. Счётчики живут
+// здесь, а не в usecase: там правило, а здесь наблюдаемость — как и лог
+// запросов.
+type Metrics interface {
+	RegisterAttempt(success bool)
+	LoginAttempt(success bool)
+	MonitorCreated(kind domain.MonitorKind)
+	MonitorDeleted()
+}
+
 type Deps struct {
 	Logger    *slog.Logger
 	Version   string
 	Env       string
 	BodyLimit int64
+	Metrics   Metrics
 
 	Register    *registeruser.Usecase
 	Login       *loginuser.Usecase

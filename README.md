@@ -222,6 +222,36 @@ curl -sS -X POST http://localhost:8081/api/v1/monitors \
 меньше параллелизма воркера, а в production нельзя оставить пример секрета.
 Неверная конфигурация роняет процесс сразу, а не через час работы.
 
+## Метрики
+
+Каждый процесс отдаёт метрики в формате OpenMetrics на выделенном порту
+`9090`, путь `/metrics`. Порт отдельный и не входит в Service приложения:
+эндпоинт работает без авторизации и должен быть доступен только изнутри
+кластера. Подробности — в [Отчёт-ДЗ4.md](%D0%9E%D1%82%D1%87%D1%91%D1%82-%D0%94%D0%974.md).
+
+```bash
+curl -s http://localhost:9091/metrics | grep '^sentinel_'   # api, порт проброшен в compose
+make metrics                                                # то же короче
+docker compose exec worker wget -qO- localhost:9090/metrics # воркер, изнутри сети
+```
+
+Что отдаётся:
+
+- метрики рантайма Go и процесса (`go_*`, `process_*`) — готовыми
+  коллекторами `client_golang`;
+- метрики HTTP-слоя (`sentinel_http_*`) — по шаблону маршрута, а не по пути;
+- бизнес-метрики (`sentinel_probes_total`, `sentinel_probe_latency_seconds`,
+  `sentinel_incidents_*`, `sentinel_auth_attempts_total`,
+  `sentinel_monitors*`) — счётчики и срез текущего состояния;
+- метрики PostgreSQL — готовым `postgres-exporter` сайдкаром в поде базы.
+
+Сбор в minikube — Victoria Metrics, поставленная helm-чартом:
+
+```bash
+make monitoring-up     # helm upgrade --install vm-single в namespace monitoring
+make vm-ui             # port-forward, дальше http://localhost:8428/vmui
+```
+
 ## Разработка
 
 ```bash
@@ -260,6 +290,9 @@ api/openapi/           контракт API
 cmd/{api,worker,cleanup}  точки входа трёх процессов
 docker-compose.yaml    полное окружение: postgres, миграции, api, worker, web
 deployments/           Dockerfile процессов, Dockerfile фронтенда, конфиг nginx
+k8s/                   манифесты для minikube
+  logging/             Victoria Logs и Vector
+  monitoring/          values для чарта Victoria Metrics
 internal/
   app/                 composition root
   config/              конфигурация из env
@@ -267,10 +300,12 @@ internal/
   infra/
     auth/              bcrypt, JWT
     db/postgres/       пул, транзакции, миграции, репозитории
+    metrics/           реестр метрик, адаптеры под порты, отправка push-моделью
     prober/            HTTP-проверки и защита от SSRF
   transport/http/      роутер, middleware, хендлеры, DTO, mapper
+  transport/metrics/   отдельный сервер /metrics
   usecase/             по пакету на сценарий
-  worker/              планировщик и пул проверок
+  worker/              планировщик, пул проверок, срез состояния для метрик
   integrationtests/    тесты против настоящей БД
 scripts/               demo.sh, smoke.sh
 web/                   фронтенд без сборки

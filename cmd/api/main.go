@@ -25,7 +25,7 @@ func run() error {
 		return err
 	}
 
-	logger := app.NewLogger(&cfg.Log, &cfg.App, "sentinel-api")
+	logger := app.NewLogger(&cfg.Log, &cfg.App, app.ServiceAPI)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stop()

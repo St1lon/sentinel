@@ -25,7 +25,7 @@ func run() error {
 		return err
 	}
 
-	logger := app.NewLogger(&cfg.Log, &cfg.App, "sentinel-worker")
+	logger := app.NewLogger(&cfg.Log, &cfg.App, app.ServiceWorker)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stop()

@@ -18,6 +18,10 @@ spec:
     metadata:
       labels:
         app: worker
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
     spec:
       initContainers:
       - image: postgres:17.11-alpine
@@ -37,6 +41,9 @@ spec:
       - image: sentinel/worker:dev
         name: worker
         imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 9090
+          name: metrics
         envFrom:
         - configMapRef:
             name: sentinel-config

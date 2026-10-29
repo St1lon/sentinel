@@ -168,3 +168,37 @@ func TestLoadCleanupConfig_Defaults(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 30, cfg.Retention.CheckRetentionDays)
 }
+
+func TestLoadAPIConfig_MetricsDefaults(t *testing.T) {
+	setBaseEnv(t)
+
+	cfg, err := config.LoadAPIConfig(config.NewValidator())
+	require.NoError(t, err)
+
+	require.Equal(t, 9090, cfg.Metrics.Port)
+	require.Equal(t, "/metrics", cfg.Metrics.Path)
+}
+
+func TestLoadAPIConfig_MetricsPortEqualToHTTPPortRejected(t *testing.T) {
+	setBaseEnv(t)
+	t.Setenv("METRICS_PORT", "8080")
+
+	_, err := config.LoadAPIConfig(config.NewValidator())
+	require.Error(t, err, "метрики слушают отдельный порт, иначе они попадут в публичный Service")
+}
+
+func TestLoadCleanupConfig_PushDisabledByDefault(t *testing.T) {
+	t.Setenv("DATABASE_URL", validDSN)
+
+	cfg, err := config.LoadCleanupConfig(config.NewValidator())
+	require.NoError(t, err)
+	require.Empty(t, cfg.Push.URL, "без адреса отправки задача просто не шлёт метрики")
+}
+
+func TestLoadCleanupConfig_PushURLValidated(t *testing.T) {
+	t.Setenv("DATABASE_URL", validDSN)
+	t.Setenv("METRICS_PUSH_URL", "not-a-url")
+
+	_, err := config.LoadCleanupConfig(config.NewValidator())
+	require.Error(t, err)
+}

@@ -14,6 +14,11 @@ data:
   HTTP_CORS_ALLOWED_ORIGINS: "*"
   HTTP_SHUTDOWN_TIMEOUT: "15s"
 
+  METRICS_PORT: "9090"
+  METRICS_PATH: "/metrics"
+
+  METRICS_PUSH_URL: "http://vm-single-victoria-metrics-single-server.monitoring.svc.cluster.local:8428/api/v1/import/prometheus"
+
   POSTGRES_DB: "sentinel"
   POSTGRES_USER: "sentinel"
   POSTGRES_MAX_CONNS: "10"
@@ -26,6 +31,7 @@ data:
   WORKER_BATCH_SIZE: "50"
   WORKER_POLL_INTERVAL: "1s"
   WORKER_SHUTDOWN_TIMEOUT: "30s"
+  WORKER_STATS_INTERVAL: "15s"
   ALLOW_PRIVATE_TARGETS: "false"
 
   RETENTION_CHECK_DAYS: "30"
