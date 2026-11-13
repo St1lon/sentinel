@@ -83,6 +83,12 @@ services:
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?AUTH_JWT_SECRET is required - run `make env` or `cp .env.example .env`}
       AUTH_TOKEN_TTL: ${AUTH_TOKEN_TTL:-24h}
       AUTH_BCRYPT_COST: ${AUTH_BCRYPT_COST:-10}
+      CHAOS_ERROR_RATE: ${CHAOS_ERROR_RATE:-0}
+      CHAOS_LATENCY: ${CHAOS_LATENCY:-0s}
+      CHAOS_LATENCY_RATE: ${CHAOS_LATENCY_RATE:-0}
+      CHAOS_READYZ_FAIL: ${CHAOS_READYZ_FAIL:-false}
+      CHAOS_GOROUTINE_LEAK: ${CHAOS_GOROUTINE_LEAK:-0}
+      CHAOS_MEM_HOG_MB: ${CHAOS_MEM_HOG_MB:-0}
     ports:
       - "${API_PORT:-8081}:8080"
       - "${API_METRICS_PORT:-9091}:9090"
@@ -118,6 +124,31 @@ services:
       WORKER_STATS_INTERVAL: ${WORKER_STATS_INTERVAL:-15s}
       ALLOW_PRIVATE_TARGETS: ${ALLOW_PRIVATE_TARGETS:-false}
     stop_grace_period: 35s
+    <<: *hardening
+    networks: [sentinel]
+    restart: unless-stopped
+
+  prober:
+    build:
+      <<: *go-build
+      args:
+        SERVICE: prober
+        VERSION: ${APP_VERSION:-dev}
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      <<: [*app-env, *metrics-env]
+      PROBER_TARGET_URL: http://api:8080
+      PROBER_INTERVAL: ${PROBER_INTERVAL:-10s}
+      PROBER_TIMEOUT: ${PROBER_TIMEOUT:-3s}
+      PROBER_LOGIN_EMAIL: ${PROBER_LOGIN_EMAIL:-demo@sentinel.local}
+      PROBER_LOGIN_PASSWORD: ${PROBER_LOGIN_PASSWORD:-demo-password-123}
+      PROBER_STATUS_SLUG: ${PROBER_STATUS_SLUG:-}
+      PROBER_USER_AGENT: ${PROBER_USER_AGENT:-SentinelProber/1.0}
+    ports:
+      - "${PROBER_METRICS_PORT:-9092}:9090"
+    stop_grace_period: 10s
     <<: *hardening
     networks: [sentinel]
     restart: unless-stopped

@@ -1,0 +1,102 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alert-rules
+  namespace: monitoring
+data:
+  sentinel-alerts.yaml: |
+    groups:
+      - name: sentinel-service
+        interval: 30s
+        rules:
+          - alert: SentinelAPIHighErrorRate
+            expr: |
+              sum(rate(sentinel_http_requests_total{service="sentinel-api",route!~"/healthz|/readyz|unmatched",status=~"5.."}[5m]))
+              /
+              sum(rate(sentinel_http_requests_total{service="sentinel-api",route!~"/healthz|/readyz|unmatched"}[5m]))
+              > 0.05
+            for: 2m
+            labels:
+              severity: critical
+              service: sentinel
+            annotations:
+              summary: "Sentinel API: больше 5% ответов с кодом 5xx"
+              description: "Доля ошибок {{ $value | humanizePercentage }} за 5 минут на маршрутах /api/. SLO доступности 99.5% горит в ~10 раз быстрее нормы."
+              runbook_url: "https://github.com/St1lon/sentinel/blob/main/Отчёт-ДЗ6.md"
+
+          - alert: SentinelAPIHighLatencyP95
+            expr: |
+              histogram_quantile(0.95,
+                sum(rate(sentinel_http_request_duration_seconds_bucket{service="sentinel-api",route!~"/healthz|/readyz"}[5m])) by (le)
+              ) > 0.5
+            for: 5m
+            labels:
+              severity: warning
+              service: sentinel
+            annotations:
+              summary: "Sentinel API: p95 задержки больше 500 мс"
+              description: "p95 = {{ $value | humanizeDuration }} за 5 минут. SLA обещает p95 <= 500 мс."
+              runbook_url: "https://github.com/St1lon/sentinel/blob/main/Отчёт-ДЗ6.md"
+
+          - alert: SentinelErrorBudgetBurn
+            expr: |
+              sentinel:burn_rate:ratio5m > 14.4
+              and on(slo) sentinel:burn_rate:ratio1h > 6
+            for: 2m
+            labels:
+              severity: critical
+              service: sentinel
+            annotations:
+              summary: "Sentinel: выгорает бюджет ошибок SLO {{ $labels.slo }}"
+              description: "Burn rate {{ printf \"%.0f\" $value }}x за 5 минут при burn rate за час больше 6. При таком темпе месячный бюджет сгорит за двое суток."
+              runbook_url: "https://github.com/St1lon/sentinel/blob/main/Отчёт-ДЗ6.md"
+
+          - alert: SentinelProbePipelineStalled
+            expr: |
+              (sum(rate(sentinel_probes_total[2m])) or vector(0)) == 0
+              and on() (max_over_time(sum(sentinel_monitors{service="sentinel-worker"})[1h:1m]) > 0)
+            for: 3m
+            labels:
+              severity: critical
+              service: sentinel
+            annotations:
+              summary: "Sentinel: конвейер проверок остановлен"
+              description: "За 2 минуты не выполнено ни одной проверки, при этом мониторы в системе есть. Пользователи не видят обновления статусов."
+              runbook_url: "https://github.com/St1lon/sentinel/blob/main/Отчёт-ДЗ6.md"
+
+          - alert: SentinelProberDeadMan
+            expr: absent(sentinel_sli_journey_success{service="sentinel-prober"})
+            for: 5m
+            labels:
+              severity: warning
+              service: sentinel
+            annotations:
+              summary: "Sentinel: blackbox-пробер молчит"
+              description: "Пробер не выполнял сценарий критического пути дольше 5 минут: SLI доступности снаружи не обновляется."
+              runbook_url: "https://github.com/St1lon/sentinel/blob/main/Отчёт-ДЗ6.md"
+
+      - name: sentinel-runtime
+        interval: 30s
+        rules:
+          - alert: SentinelGoroutinesHigh
+            expr: max by (service) (go_goroutines{service=~"sentinel-(api|worker|prober)"}) > 200
+            for: 5m
+            labels:
+              severity: warning
+              service: sentinel
+            annotations:
+              summary: "Sentinel: подозрение на утечку горутин в {{ $labels.service }}"
+              description: "{{ printf \"%.0f\" $value }} горутин дольше 5 минут. Скорее всего, запросы где-то не освобождают ресурсы."
+              runbook_url: "https://github.com/St1lon/sentinel/blob/main/Отчёт-ДЗ6.md"
+
+          - alert: SentinelMemoryHigh
+            expr: process_resident_memory_bytes{service="sentinel-api"} > 1.5e+08
+            for: 3m
+            labels:
+              severity: critical
+              service: sentinel
+            annotations:
+              summary: "Sentinel api: RSS около 150 MiB"
+              description: "Резидентная память {{ $value | humanize1024 }}B дольше 3 минут: приближение к лимиту пода и OOMKill."
+              runbook_url: "https://github.com/St1lon/sentinel/blob/main/Отчёт-ДЗ6.md"

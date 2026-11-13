@@ -29,7 +29,7 @@ func NewHTTP(reg prometheus.Registerer) *HTTP {
 			Namespace: namespace,
 			Name:      "http_request_duration_seconds",
 			Help:      "Время обработки HTTP-запроса.",
-			Buckets:   prometheus.DefBuckets,
+			Buckets:   sloLatencyBuckets(),
 		}, []string{"method", "route"}),
 
 		inFlight: factory.NewGauge(prometheus.GaugeOpts{

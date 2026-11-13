@@ -42,4 +42,3 @@ spec:
       - name: migrations
         configMap:
           name: sentinel-migrations
-...

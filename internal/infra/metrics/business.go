@@ -45,11 +45,11 @@ func NewBusiness(reg prometheus.Registerer) *Business {
 }
 
 func (b *Business) RegisterAttempt(success bool) {
-	b.authAttempts.WithLabelValues("register", attemptResult(success)).Inc()
+	b.authAttempts.WithLabelValues("register", successResult(success)).Inc()
 }
 
 func (b *Business) LoginAttempt(success bool) {
-	b.authAttempts.WithLabelValues("login", attemptResult(success)).Inc()
+	b.authAttempts.WithLabelValues("login", successResult(success)).Inc()
 }
 
 func (b *Business) MonitorCreated(kind domain.MonitorKind) {
@@ -60,7 +60,7 @@ func (b *Business) MonitorDeleted() {
 	b.monitorsDeleted.Inc()
 }
 
-func attemptResult(success bool) string {
+func successResult(success bool) string {
 	if success {
 		return resultSuccess
 	}

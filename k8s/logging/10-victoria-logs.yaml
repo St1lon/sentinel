@@ -9,7 +9,6 @@ spec:
   resources:
     requests:
       storage: 2Gi
-...
 ---
 apiVersion: v1
 kind: Service
@@ -24,7 +23,6 @@ spec:
   - port: 9428
     targetPort: http
     name: http
-...
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -85,4 +83,3 @@ spec:
       - name: data
         persistentVolumeClaim:
           claimName: victoria-logs-data
-...

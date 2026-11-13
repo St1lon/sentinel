@@ -62,4 +62,3 @@ spec:
         hostPath:
           path: /var/lib/vector
           type: DirectoryOrCreate
-...

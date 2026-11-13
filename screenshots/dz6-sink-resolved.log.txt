@@ -1,0 +1,402 @@
+TIME: 2026-11-08T18:50:40.588081975Z
+{
+  "alerts": [
+    {
+      "annotations": {
+        "description": "3414 горутин дольше 5 минут. Скорее всего, запросы где-то не освобождают ресурсы.",
+        "runbook_url": "https://github.com/St1lon/sentinel/blob/main/Отчёт-ДЗ6.md",
+        "summary": "Sentinel: подозрение на утечку горутин в sentinel-api"
+      },
+      "endsAt": "2026-11-08T18:50:00Z",
+      "fingerprint": "6dd986c71e5357f5",
+      "generatorURL": "http://vmalert-5c57468d4c-7xm6z:8880/vmalert/alert?group_id=6600651965426042068\u0026alert_id=4857199576689622242",
+      "labels": {
+        "alertgroup": "sentinel-runtime",
+        "alertname": "SentinelGoroutinesHigh",
+        "exported_service": "sentinel-api",
+        "service": "sentinel",
+        "severity": "warning"
+      },
+      "startsAt": "2026-11-08T18:31:00Z",
+      "status": "resolved"
+    }
+  ],
+  "commonAnnotations": {
+    "description": "3414 горутин дольше 5 минут. Скорее всего, запросы где-то не освобождают ресурсы.",
+    "runbook_url": "https://github.com/St1lon/sentinel/blob/main/Отчёт-ДЗ6.md",
+    "summary": "Sentinel: подозрение на утечку горутин в sentinel-api"
+  },
+  "commonLabels": {
+    "alertgroup": "sentinel-runtime",
+    "alertname": "SentinelGoroutinesHigh",
+    "exported_service": "sentinel-api",
+    "service": "sentinel",
+    "severity": "warning"
+  },
+  "externalURL": "http://alertmanager-588989995d-gqrmk:9093",
+  "groupKey": "{}/{severity=\"warning\"}:{alertname=\"SentinelGoroutinesHigh\", severity=\"warning\"}",
+  "groupLabels": {
+    "alertname": "SentinelGoroutinesHigh",
+    "severity": "warning"
+  },
+  "receiver": "sink",
+  "status": "resolved",
+  "truncatedAlerts": 0,
+  "version": "4"
+}
+
+================================================================================
+
+TIME: 2026-11-08T18:50:40.58833102Z
+{
+  "alerts": [
+    {
+      "annotations": {
+        "description": "Резидентная память 167.1MiB дольше 3 минут: приближение к лимиту пода и OOMKill.",
+        "runbook_url": "https://github.com/St1lon/sentinel/blob/main/Отчёт-ДЗ6.md",
+        "summary": "Sentinel api: RSS около 150 MiB"
+      },
+      "endsAt": "2026-11-08T18:50:00Z",
+      "fingerprint": "345f2f526d8202f5",
+      "generatorURL": "http://vmalert-5c57468d4c-7xm6z:8880/vmalert/alert?group_id=6600651965426042068\u0026alert_id=9789206124237304812",
+      "labels": {
+        "alertgroup": "sentinel-runtime",
+        "alertname": "SentinelMemoryHigh",
+        "app": "api",
+        "exported_service": "sentinel-api",
+        "instance": "10.244.0.24:9090",
+        "job": "kubernetes-pods",
+        "namespace": "sentinel",
+        "pod": "api-6656fffd98-f4296",
+        "pod_template_hash": "6656fffd98",
+        "service": "sentinel",
+        "severity": "critical"
+      },
+      "startsAt": "2026-11-08T18:29:00Z",
+      "status": "resolved"
+    },
+    {
+      "annotations": {
+        "description": "Резидентная память 165.5MiB дольше 3 минут: приближение к лимиту пода и OOMKill.",
+        "runbook_url": "https://github.com/St1lon/sentinel/blob/main/Отчёт-ДЗ6.md",
+        "summary": "Sentinel api: RSS около 150 MiB"
+      },
+      "endsAt": "2026-11-08T18:50:00Z",
+      "fingerprint": "b8fc6ea120618dd9",
+      "generatorURL": "http://vmalert-5c57468d4c-7xm6z:8880/vmalert/alert?group_id=6600651965426042068\u0026alert_id=16345818407080207874",
+      "labels": {
+        "alertgroup": "sentinel-runtime",
+        "alertname": "SentinelMemoryHigh",
+        "app": "api",
+        "exported_service": "sentinel-api",
+        "instance": "10.244.0.25:9090",
+        "job": "kubernetes-pods",
+        "namespace": "sentinel",
+        "pod": "api-6656fffd98-p6jck",
+        "pod_template_hash": "6656fffd98",
+        "service": "sentinel",
+        "severity": "critical"
+      },
+      "startsAt": "2026-11-08T18:30:30Z",
+      "status": "resolved"
+    }
+  ],
+  "commonAnnotations": {
+    "runbook_url": "https://github.com/St1lon/sentinel/blob/main/Отчёт-ДЗ6.md",
+    "summary": "Sentinel api: RSS около 150 MiB"
+  },
+  "commonLabels": {
+    "alertgroup": "sentinel-runtime",
+    "alertname": "SentinelMemoryHigh",
+    "app": "api",
+    "exported_service": "sentinel-api",
+    "job": "kubernetes-pods",
+    "namespace": "sentinel",
+    "pod_template_hash": "6656fffd98",
+    "service": "sentinel",
+    "severity": "critical"
+  },
+  "externalURL": "http://alertmanager-588989995d-gqrmk:9093",
+  "groupKey": "{}/{severity=\"critical\"}:{alertname=\"SentinelMemoryHigh\", severity=\"critical\"}",
+  "groupLabels": {
+    "alertname": "SentinelMemoryHigh",
+    "severity": "critical"
+  },
+  "receiver": "sink",
+  "status": "resolved",
+  "truncatedAlerts": 0,
+  "version": "4"
+}
+
+================================================================================
+
+TIME: 2026-11-08T18:51:08.337316081Z
+{
+  "alerts": [
+    {
+      "annotations": {
+        "description": "Пробер не выполнял сценарий критического пути дольше 5 минут: SLI доступности снаружи не обновляется.",
+        "runbook_url": "https://github.com/St1lon/sentinel/blob/main/Отчёт-ДЗ6.md",
+        "summary": "Sentinel: blackbox-пробер молчит"
+      },
+      "endsAt": "2026-11-08T18:50:30Z",
+      "fingerprint": "b410fe599179b605",
+      "generatorURL": "http://vmalert-5c57468d4c-7xm6z:8880/vmalert/alert?group_id=5217206677502819481\u0026alert_id=6276363701095992358",
+      "labels": {
+        "alertgroup": "sentinel-service",
+        "alertname": "SentinelProberDeadMan",
+        "exported_service": "sentinel-prober",
+        "service": "sentinel",
+        "severity": "warning"
+      },
+      "startsAt": "2026-11-08T18:46:30Z",
+      "status": "resolved"
+    }
+  ],
+  "commonAnnotations": {
+    "description": "Пробер не выполнял сценарий критического пути дольше 5 минут: SLI доступности снаружи не обновляется.",
+    "runbook_url": "https://github.com/St1lon/sentinel/blob/main/Отчёт-ДЗ6.md",
+    "summary": "Sentinel: blackbox-пробер молчит"
+  },
+  "commonLabels": {
+    "alertgroup": "sentinel-service",
+    "alertname": "SentinelProberDeadMan",
+    "exported_service": "sentinel-prober",
+    "service": "sentinel",
+    "severity": "warning"
+  },
+  "externalURL": "http://alertmanager-588989995d-gqrmk:9093",
+  "groupKey": "{}/{severity=\"warning\"}:{alertname=\"SentinelProberDeadMan\", severity=\"warning\"}",
+  "groupLabels": {
+    "alertname": "SentinelProberDeadMan",
+    "severity": "warning"
+  },
+  "receiver": "sink",
+  "status": "resolved",
+  "truncatedAlerts": 0,
+  "version": "4"
+}
+
+================================================================================
+
+TIME: 2026-11-08T18:52:08.336220863Z
+{
+  "alerts": [
+    {
+      "annotations": {
+        "description": "За 2 минуты не выполнено ни одной проверки, при этом мониторы в системе есть. Пользователи не видят обновления статусов.",
+        "runbook_url": "https://github.com/St1lon/sentinel/blob/main/Отчёт-ДЗ6.md",
+        "summary": "Sentinel: конвейер проверок остановлен"
+      },
+      "endsAt": "2026-11-08T18:51:00Z",
+      "fingerprint": "52c079dc06234b11",
+      "generatorURL": "http://vmalert-5c57468d4c-7xm6z:8880/vmalert/alert?group_id=5217206677502819481\u0026alert_id=14378029153279782195",
+      "labels": {
+        "alertgroup": "sentinel-service",
+        "alertname": "SentinelProbePipelineStalled",
+        "service": "sentinel",
+        "severity": "critical"
+      },
+      "startsAt": "2026-11-08T18:46:30Z",
+      "status": "resolved"
+    }
+  ],
+  "commonAnnotations": {
+    "description": "За 2 минуты не выполнено ни одной проверки, при этом мониторы в системе есть. Пользователи не видят обновления статусов.",
+    "runbook_url": "https://github.com/St1lon/sentinel/blob/main/Отчёт-ДЗ6.md",
+    "summary": "Sentinel: конвейер проверок остановлен"
+  },
+  "commonLabels": {
+    "alertgroup": "sentinel-service",
+    "alertname": "SentinelProbePipelineStalled",
+    "service": "sentinel",
+    "severity": "critical"
+  },
+  "externalURL": "http://alertmanager-588989995d-gqrmk:9093",
+  "groupKey": "{}/{severity=\"critical\"}:{alertname=\"SentinelProbePipelineStalled\", severity=\"critical\"}",
+  "groupLabels": {
+    "alertname": "SentinelProbePipelineStalled",
+    "severity": "critical"
+  },
+  "receiver": "sink",
+  "status": "resolved",
+  "truncatedAlerts": 0,
+  "version": "4"
+}
+
+================================================================================
+
+TIME: 2026-11-08T18:54:38.337495915Z
+{
+  "alerts": [
+    {
+      "annotations": {
+        "description": "Burn rate 27x за 5 минут при burn rate за час больше 6. При таком темпе месячный бюджет сгорит за двое суток.",
+        "runbook_url": "https://github.com/St1lon/sentinel/blob/main/Отчёт-ДЗ6.md",
+        "summary": "Sentinel: выгорает бюджет ошибок SLO availability"
+      },
+      "endsAt": "2026-11-08T18:54:00Z",
+      "fingerprint": "d6b75522322ccaab",
+      "generatorURL": "http://vmalert-5c57468d4c-7xm6z:8880/vmalert/alert?group_id=5217206677502819481\u0026alert_id=18292727190802279674",
+      "labels": {
+        "alertgroup": "sentinel-service",
+        "alertname": "SentinelErrorBudgetBurn",
+        "service": "sentinel",
+        "severity": "critical",
+        "slo": "availability"
+      },
+      "startsAt": "2026-11-08T18:26:00Z",
+      "status": "resolved"
+    },
+    {
+      "annotations": {
+        "description": "Burn rate 40x за 5 минут при burn rate за час больше 6. При таком темпе месячный бюджет сгорит за двое суток.",
+        "runbook_url": "https://github.com/St1lon/sentinel/blob/main/Отчёт-ДЗ6.md",
+        "summary": "Sentinel: выгорает бюджет ошибок SLO pipeline"
+      },
+      "endsAt": "0001-01-01T00:00:00Z",
+      "fingerprint": "770e9d76b8368954",
+      "generatorURL": "http://vmalert-5c57468d4c-7xm6z:8880/vmalert/alert?group_id=5217206677502819481\u0026alert_id=958547598020189413",
+      "labels": {
+        "alertgroup": "sentinel-service",
+        "alertname": "SentinelErrorBudgetBurn",
+        "service": "sentinel",
+        "severity": "critical",
+        "slo": "pipeline"
+      },
+      "startsAt": "2026-11-08T18:47:00Z",
+      "status": "firing"
+    }
+  ],
+  "commonAnnotations": {
+    "runbook_url": "https://github.com/St1lon/sentinel/blob/main/Отчёт-ДЗ6.md"
+  },
+  "commonLabels": {
+    "alertgroup": "sentinel-service",
+    "alertname": "SentinelErrorBudgetBurn",
+    "service": "sentinel",
+    "severity": "critical"
+  },
+  "externalURL": "http://alertmanager-588989995d-gqrmk:9093",
+  "groupKey": "{}/{severity=\"critical\"}:{alertname=\"SentinelErrorBudgetBurn\", severity=\"critical\"}",
+  "groupLabels": {
+    "alertname": "SentinelErrorBudgetBurn",
+    "severity": "critical"
+  },
+  "receiver": "sink",
+  "status": "firing",
+  "truncatedAlerts": 0,
+  "version": "4"
+}
+
+================================================================================
+
+TIME: 2026-11-08T18:55:38.334942968Z
+{
+  "alerts": [
+    {
+      "annotations": {
+        "description": "Доля ошибок 6.328% за 5 минут на маршрутах /api/. SLO доступности 99.5% горит в ~10 раз быстрее нормы.",
+        "runbook_url": "https://github.com/St1lon/sentinel/blob/main/Отчёт-ДЗ6.md",
+        "summary": "Sentinel API: больше 5% ответов с кодом 5xx"
+      },
+      "endsAt": "2026-11-08T18:55:00Z",
+      "fingerprint": "7560c525fe82beca",
+      "generatorURL": "http://vmalert-5c57468d4c-7xm6z:8880/vmalert/alert?group_id=5217206677502819481\u0026alert_id=8046657656055227060",
+      "labels": {
+        "alertgroup": "sentinel-service",
+        "alertname": "SentinelAPIHighErrorRate",
+        "service": "sentinel",
+        "severity": "critical"
+      },
+      "startsAt": "2026-11-08T18:20:00Z",
+      "status": "resolved"
+    }
+  ],
+  "commonAnnotations": {
+    "description": "Доля ошибок 6.328% за 5 минут на маршрутах /api/. SLO доступности 99.5% горит в ~10 раз быстрее нормы.",
+    "runbook_url": "https://github.com/St1lon/sentinel/blob/main/Отчёт-ДЗ6.md",
+    "summary": "Sentinel API: больше 5% ответов с кодом 5xx"
+  },
+  "commonLabels": {
+    "alertgroup": "sentinel-service",
+    "alertname": "SentinelAPIHighErrorRate",
+    "service": "sentinel",
+    "severity": "critical"
+  },
+  "externalURL": "http://alertmanager-588989995d-gqrmk:9093",
+  "groupKey": "{}/{severity=\"critical\"}:{alertname=\"SentinelAPIHighErrorRate\", severity=\"critical\"}",
+  "groupLabels": {
+    "alertname": "SentinelAPIHighErrorRate",
+    "severity": "critical"
+  },
+  "receiver": "sink",
+  "status": "resolved",
+  "truncatedAlerts": 0,
+  "version": "4"
+}
+
+================================================================================
+
+TIME: 2026-11-08T18:56:38.334386068Z
+{
+  "alerts": [
+    {
+      "annotations": {
+        "description": "Burn rate 27x за 5 минут при burn rate за час больше 6. При таком темпе месячный бюджет сгорит за двое суток.",
+        "runbook_url": "https://github.com/St1lon/sentinel/blob/main/Отчёт-ДЗ6.md",
+        "summary": "Sentinel: выгорает бюджет ошибок SLO availability"
+      },
+      "endsAt": "2026-11-08T18:54:00Z",
+      "fingerprint": "d6b75522322ccaab",
+      "generatorURL": "http://vmalert-5c57468d4c-7xm6z:8880/vmalert/alert?group_id=5217206677502819481\u0026alert_id=18292727190802279674",
+      "labels": {
+        "alertgroup": "sentinel-service",
+        "alertname": "SentinelErrorBudgetBurn",
+        "service": "sentinel",
+        "severity": "critical",
+        "slo": "availability"
+      },
+      "startsAt": "2026-11-08T18:26:00Z",
+      "status": "resolved"
+    },
+    {
+      "annotations": {
+        "description": "Burn rate 20x за 5 минут при burn rate за час больше 6. При таком темпе месячный бюджет сгорит за двое суток.",
+        "runbook_url": "https://github.com/St1lon/sentinel/blob/main/Отчёт-ДЗ6.md",
+        "summary": "Sentinel: выгорает бюджет ошибок SLO pipeline"
+      },
+      "endsAt": "2026-11-08T18:56:00Z",
+      "fingerprint": "770e9d76b8368954",
+      "generatorURL": "http://vmalert-5c57468d4c-7xm6z:8880/vmalert/alert?group_id=5217206677502819481\u0026alert_id=958547598020189413",
+      "labels": {
+        "alertgroup": "sentinel-service",
+        "alertname": "SentinelErrorBudgetBurn",
+        "service": "sentinel",
+        "severity": "critical",
+        "slo": "pipeline"
+      },
+      "startsAt": "2026-11-08T18:47:00Z",
+      "status": "resolved"
+    }
+  ],
+  "commonAnnotations": {
+    "runbook_url": "https://github.com/St1lon/sentinel/blob/main/Отчёт-ДЗ6.md"
+  },
+  "commonLabels": {
+    "alertgroup": "sentinel-service",
+    "alertname": "SentinelErrorBudgetBurn",
+    "service": "sentinel",
+    "severity": "critical"
+  },
+  "externalURL": "http://alertmanager-588989995d-gqrmk:9093",
+  "groupKey": "{}/{severity=\"critical\"}:{alertname=\"SentinelErrorBudgetBurn\", severity=\"critical\"}",
+  "groupLabels": {
+    "alertname": "SentinelErrorBudgetBurn",
+    "severity": "critical"
+  },
+  "receiver": "sink",
+  "status": "resolved",
+  "truncatedAlerts": 0,
+  "version": "4"
+}

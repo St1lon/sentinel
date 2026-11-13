@@ -49,6 +49,25 @@ func TestRegistry_AddsServiceLabelToEverySeries(t *testing.T) {
 	require.Equal(t, 1.0, value(t, registry, "sentinel_monitors_deleted_total", labels{"service": testService}))
 }
 
+func TestHTTP_HistogramHasSLOBucket(t *testing.T) {
+	t.Parallel()
+
+	registry := metrics.NewJobRegistry(testService)
+	metrics.NewHTTP(registry.Registerer()).
+		RequestFinished(http.MethodGet, "/healthz", http.StatusOK, 250*time.Millisecond)
+
+	histogram := find(t, registry,
+		"sentinel_http_request_duration_seconds", labels{"route": "/healthz"}).GetHistogram()
+
+	bounds := make([]float64, 0, len(histogram.GetBucket()))
+	for _, bucket := range histogram.GetBucket() {
+		bounds = append(bounds, bucket.GetUpperBound())
+	}
+
+	require.Contains(t, bounds, 0.3)
+	require.Equal(t, uint64(1), histogram.GetSampleCount())
+}
+
 func TestProbes_CountsProbesLatencyAndIncidents(t *testing.T) {
 	t.Parallel()
 
@@ -70,6 +89,50 @@ func TestProbes_CountsProbesLatencyAndIncidents(t *testing.T) {
 	histogram := find(t, registry, "sentinel_probe_latency_seconds", kind).GetHistogram()
 	require.Equal(t, uint64(2), histogram.GetSampleCount())
 	require.InDelta(t, 5.12, histogram.GetSampleSum(), 0.001)
+}
+
+func TestSLI_RecordsStepsAndJourney(t *testing.T) {
+	t.Parallel()
+
+	registry := metrics.NewJobRegistry(testService)
+	sli := metrics.NewSLI(registry.Registerer())
+
+	sli.StepFinished("login", true, 120*time.Millisecond)
+	sli.StepFinished("monitors", false, 3*time.Second)
+	sli.JourneyFinished(false)
+
+	const probes = "sentinel_sli_probe_total"
+
+	require.Equal(t, 1.0, value(t, registry, probes, labels{"step": "login", "result": "success"}))
+	require.Equal(t, 1.0, value(t, registry, probes, labels{"step": "monitors", "result": "failure"}))
+	require.Equal(t, 1.0, value(t, registry, "sentinel_sli_step_success", labels{"step": "login"}))
+	require.Equal(t, 0.0, value(t, registry, "sentinel_sli_step_success", labels{"step": "monitors"}))
+	require.Equal(t, 0.0, value(t, registry, "sentinel_sli_journey_success", nil))
+
+	sli.StepFinished("monitors", true, 90*time.Millisecond)
+	sli.JourneyFinished(true)
+
+	require.Equal(t, 1.0, value(t, registry, "sentinel_sli_step_success", labels{"step": "monitors"}))
+	require.Equal(t, 1.0, value(t, registry, "sentinel_sli_journey_success", nil))
+}
+
+// Шкала пробера и шкала HTTP-слоя должны совпадать: SLI скорости считается
+// по краю le="0.3" и у того, и у другого источника.
+func TestSLI_HistogramSharesSLOBucketWithHTTP(t *testing.T) {
+	t.Parallel()
+
+	registry := metrics.NewJobRegistry(testService)
+	metrics.NewSLI(registry.Registerer()).StepFinished("healthz", true, 50*time.Millisecond)
+
+	histogram := find(t, registry,
+		"sentinel_sli_probe_duration_seconds", labels{"step": "healthz"}).GetHistogram()
+
+	bounds := make([]float64, 0, len(histogram.GetBucket()))
+	for _, bucket := range histogram.GetBucket() {
+		bounds = append(bounds, bucket.GetUpperBound())
+	}
+
+	require.Contains(t, bounds, 0.3)
 }
 
 func TestFleet_ZeroesStatusesMissingInSummary(t *testing.T) {

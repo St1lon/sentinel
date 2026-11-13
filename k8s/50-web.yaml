@@ -13,7 +13,6 @@ spec:
     targetPort: http
     nodePort: 30080
     name: http
-...
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -66,4 +65,3 @@ spec:
             memory: 32Mi
           limits:
             memory: 64Mi
-...

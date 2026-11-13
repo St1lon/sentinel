@@ -12,7 +12,6 @@ spec:
   - port: 5432
     targetPort: 5432
     name: postgres
-...
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -123,4 +122,3 @@ spec:
       resources:
         requests:
           storage: 1Gi
-...

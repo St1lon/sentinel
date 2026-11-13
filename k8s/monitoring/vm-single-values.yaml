@@ -1,6 +1,5 @@
 ---
 server:
-  # Автообнаружение таргетов: чарт создаёт scrape-конфиг и права на чтение API.
   scrape:
     enabled: true
 
@@ -13,4 +12,3 @@ server:
       memory: 256Mi
     limits:
       memory: 1Gi
-...

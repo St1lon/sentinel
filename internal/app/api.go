@@ -87,6 +87,7 @@ func BuildAPI(ctx context.Context, cfg *config.APIConfig, logger *slog.Logger) (
 		Logger:         logger,
 		Requests:       metrics.NewHTTP(registry.Registerer()),
 		AllowedOrigins: cfg.HTTP.CORSAllowedOrigins,
+		Chaos:          &cfg.Chaos,
 	})
 
 	return &API{

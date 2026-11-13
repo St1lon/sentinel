@@ -6,4 +6,5 @@ const (
 	ServiceAPI     = "sentinel-api"
 	ServiceWorker  = "sentinel-worker"
 	ServiceCleanup = "sentinel-cleanup"
+	ServiceProber  = "sentinel-prober"
 )

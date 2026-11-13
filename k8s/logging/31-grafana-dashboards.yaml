@@ -1,0 +1,281 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-provider
+  namespace: logging
+data:
+  sentinel.yaml: |
+    apiVersion: 1
+    providers:
+      - name: sentinel
+        orgId: 1
+        folder: Sentinel
+        type: file
+        disableDeletion: true
+        allowUiUpdates: false
+        updateIntervalSeconds: 30
+        options:
+          path: /var/lib/grafana/dashboards
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: logging
+data:
+  sentinel-slo.json: |
+    {
+      "uid": "sentinel-slo",
+      "title": "Sentinel SLO",
+      "description": "SLI, SLO, бюджет ошибок и сводный SLA. Ряды считает vmalert, панели их только читают.",
+      "tags": ["sentinel", "slo"],
+      "timezone": "browser",
+      "editable": true,
+      "schemaVersion": 39,
+      "refresh": "10s",
+      "time": { "from": "now-1h", "to": "now" },
+      "templating": { "list": [] },
+      "annotations": { "list": [] },
+      "panels": [
+        {
+          "id": 1,
+          "type": "timeseries",
+          "title": "SLI 1 — доступность API (RBSLO)",
+          "description": "Доля не-5xx ответов на пользовательских маршрутах, окно 5 минут.",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "victoriametrics" },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "min": 0,
+              "max": 1,
+              "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 8, "showPoints": "never", "spanNulls": false }
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "SLO 99.5%" },
+                "properties": [
+                  { "id": "custom.lineStyle", "value": { "dash": [8, 6], "fill": "dash" } },
+                  { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "none" }
+          },
+          "targets": [
+            { "refId": "A", "expr": "sentinel:sli:ratio5m{slo=\"availability\"}", "legendFormat": "SLI, окно 5 мин" },
+            { "refId": "B", "expr": "sentinel:slo_target:ratio{slo=\"availability\"}", "legendFormat": "SLO 99.5%" }
+          ]
+        },
+        {
+          "id": 2,
+          "type": "timeseries",
+          "title": "SLI 2 — скорость API (RBSLO)",
+          "description": "Доля запросов быстрее 300 мс, окно 5 минут. Порог задан краем бакета гистограммы.",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "victoriametrics" },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "min": 0,
+              "max": 1,
+              "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 8, "showPoints": "never", "spanNulls": false }
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "SLO 95%" },
+                "properties": [
+                  { "id": "custom.lineStyle", "value": { "dash": [8, 6], "fill": "dash" } },
+                  { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "none" }
+          },
+          "targets": [
+            { "refId": "A", "expr": "sentinel:sli:ratio5m{slo=\"latency\"}", "legendFormat": "SLI, окно 5 мин" },
+            { "refId": "B", "expr": "sentinel:slo_target:ratio{slo=\"latency\"}", "legendFormat": "SLO 95%" }
+          ]
+        },
+        {
+          "id": 3,
+          "type": "timeseries",
+          "title": "SLI 3 — живость конвейера проверок (TBSLO)",
+          "description": "Доля минут, в которые воркер выполнял проверки, окно 5 минут.",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+          "datasource": { "type": "prometheus", "uid": "victoriametrics" },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "min": 0,
+              "max": 1,
+              "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 8, "showPoints": "never", "spanNulls": false }
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "SLO 99%" },
+                "properties": [
+                  { "id": "custom.lineStyle", "value": { "dash": [8, 6], "fill": "dash" } },
+                  { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "none" }
+          },
+          "targets": [
+            { "refId": "A", "expr": "sentinel:sli:ratio5m{slo=\"pipeline\"}", "legendFormat": "SLI, окно 5 мин" },
+            { "refId": "B", "expr": "sentinel:slo_target:ratio{slo=\"pipeline\"}", "legendFormat": "SLO 99%" },
+            { "refId": "C", "expr": "sum(rate(sentinel_probes_total[1m])) * 60", "legendFormat": "проверок в минуту" }
+          ]
+        },
+        {
+          "id": 4,
+          "type": "timeseries",
+          "title": "Пробер: хорошие минуты пользовательского пути",
+          "description": "Вспомогательный индикатор, своего SLO нет. Нужен там, где RBSLO слепнет: при лежащем api запросов нет вовсе и доля ошибок становится «нет данных».",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+          "datasource": { "type": "prometheus", "uid": "victoriametrics" },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "min": 0,
+              "max": 1,
+              "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 8, "showPoints": "never", "spanNulls": false }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "none" }
+          },
+          "targets": [
+            { "refId": "A", "expr": "sentinel:sli:ratio5m{slo=\"journey\"}", "legendFormat": "хорошие минуты, 5 мин" },
+            { "refId": "B", "expr": "max(sentinel_sli_journey_success)", "legendFormat": "сценарий прямо сейчас" }
+          ]
+        },
+        {
+          "id": 5,
+          "type": "stat",
+          "title": "Остаток бюджета ошибок, 30 дней",
+          "description": "1 — бюджет целый, 0 — исчерпан, ниже нуля — SLO уже нарушено.",
+          "gridPos": { "h": 6, "w": 8, "x": 0, "y": 16 },
+          "datasource": { "type": "prometheus", "uid": "victoriametrics" },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "min": 0,
+              "max": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "red", "value": null },
+                  { "color": "orange", "value": 0.25 },
+                  { "color": "green", "value": 0.5 }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "textMode": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+          },
+          "targets": [
+            { "refId": "A", "expr": "sentinel:error_budget_remaining:ratio30d", "legendFormat": "{{slo}}" }
+          ]
+        },
+        {
+          "id": 6,
+          "type": "timeseries",
+          "title": "Скорость выгорания бюджета (burn rate)",
+          "description": "1 — бюджет тратится ровно по норме, 14.4 — месячный бюджет сгорит за двое суток.",
+          "gridPos": { "h": 6, "w": 8, "x": 8, "y": 16 },
+          "datasource": { "type": "prometheus", "uid": "victoriametrics" },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "min": 0,
+              "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 0, "showPoints": "never", "spanNulls": false }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "none" }
+          },
+          "targets": [
+            { "refId": "A", "expr": "sentinel:burn_rate:ratio1h", "legendFormat": "{{slo}}, 1 ч" },
+            { "refId": "B", "expr": "sentinel:burn_rate:ratio6h", "legendFormat": "{{slo}}, 6 ч" }
+          ]
+        },
+        {
+          "id": 7,
+          "type": "gauge",
+          "title": "Сводный SLA, 30 дней",
+          "description": "Произведение трёх SLI. Цель 0.9358 — произведение трёх SLO.",
+          "gridPos": { "h": 6, "w": 8, "x": 16, "y": 16 },
+          "datasource": { "type": "prometheus", "uid": "victoriametrics" },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "min": 0.5,
+              "max": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "red", "value": null },
+                  { "color": "orange", "value": 0.9 },
+                  { "color": "green", "value": 0.9358 }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "showThresholdLabels": false,
+            "showThresholdMarkers": true,
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+          },
+          "targets": [
+            { "refId": "A", "expr": "sentinel:sla_compound:ratio30d", "legendFormat": "сводный SLA" }
+          ]
+        },
+        {
+          "id": 8,
+          "type": "timeseries",
+          "title": "Шаги сценария пробера",
+          "description": "1 — шаг прошёл, 0 — отказ. Видно, какой именно шаг пользовательского пути сломан.",
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 22 },
+          "datasource": { "type": "prometheus", "uid": "victoriametrics" },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "min": 0,
+              "max": 1,
+              "custom": { "drawStyle": "line", "lineInterpolation": "stepAfter", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": false }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "none" }
+          },
+          "targets": [
+            { "refId": "A", "expr": "max by (step) (sentinel_sli_step_success)", "legendFormat": "{{step}}" }
+          ]
+        }
+      ]
+    }

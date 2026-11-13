@@ -55,4 +55,3 @@ data:
         batch:
           max_events: 1000
           timeout_secs: 2
-...

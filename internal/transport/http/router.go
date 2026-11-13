@@ -9,6 +9,7 @@ import (
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 
+	"github.com/St1lon/sentinel/internal/config"
 	"github.com/St1lon/sentinel/internal/transport/http/apierrors"
 	"github.com/St1lon/sentinel/internal/transport/http/dto"
 	"github.com/St1lon/sentinel/internal/transport/http/handlers"
@@ -23,6 +24,7 @@ type RouterDeps struct {
 	Logger         *slog.Logger
 	Requests       middleware.RequestRecorder
 	AllowedOrigins []string
+	Chaos          *config.ChaosConfig
 }
 
 func NewRouter(deps RouterDeps) http.Handler {
@@ -42,6 +44,19 @@ func NewRouter(deps RouterDeps) http.Handler {
 		MaxAge:           corsMaxAge,
 	}))
 	router.Use(middleware.Logger(deps.Logger))
+
+	// Последним в цепочке: внесённый сбой должен попасть и в метрики,
+	// и в логи, иначе SLI его не увидит.
+	if deps.Chaos != nil && deps.Chaos.Enabled() {
+		router.Use(middleware.Chaos(middleware.ChaosOptions{
+			ErrorRate:     deps.Chaos.ErrorRate,
+			Latency:       deps.Chaos.Latency,
+			LatencyRate:   deps.Chaos.LatencyRate,
+			ReadyzFail:    deps.Chaos.ReadyzFail,
+			GoroutineLeak: deps.Chaos.GoroutineLeak,
+			MemHogBytes:   int64(deps.Chaos.MemHogMB) << 20,
+		}, deps.Logger))
+	}
 
 	router.NotFound(notFound)
 	router.MethodNotAllowed(methodNotAllowed)

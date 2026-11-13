@@ -12,7 +12,6 @@ spec:
   - port: 8080
     targetPort: http
     name: http
-...
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -75,6 +74,8 @@ spec:
             secretKeyRef:
               name: sentinel-secrets
               key: AUTH_JWT_SECRET
+        - name: GOMEMLIMIT
+          value: "192MiB"
         readinessProbe:
           httpGet:
             path: /readyz
@@ -98,6 +99,5 @@ spec:
             cpu: 50m
             memory: 64Mi
           limits:
-            memory: 128Mi
+            memory: 256Mi
       terminationGracePeriodSeconds: 20
-...

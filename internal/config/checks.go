@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 )
 
@@ -96,6 +97,44 @@ func checkAuth(app *AppConfig, cfg *AuthConfig) error {
 func checkTargets(app *AppConfig, cfg *TargetsConfig) error {
 	if app.Env == envProduction && cfg.AllowPrivate {
 		return fmt.Errorf("%w: ALLOW_PRIVATE_TARGETS must be false in production", errInvalidConfig)
+	}
+
+	return nil
+}
+
+func checkChaos(app *AppConfig, cfg *ChaosConfig) error {
+	if app.Env == envProduction && cfg.Enabled() {
+		return fmt.Errorf("%w: CHAOS_* must stay disabled in production", errInvalidConfig)
+	}
+
+	if cfg.Latency > 0 && cfg.LatencyRate == 0 {
+		return fmt.Errorf(
+			"%w: CHAOS_LATENCY is set but CHAOS_LATENCY_RATE is 0, nothing will be delayed",
+			errInvalidConfig,
+		)
+	}
+
+	return nil
+}
+
+func checkProber(cfg *ProberConfig) error {
+	cfg.TargetURL = strings.TrimRight(cfg.TargetURL, "/")
+
+	target, err := url.Parse(cfg.TargetURL)
+	if err != nil || target.Host == "" || (target.Scheme != "http" && target.Scheme != "https") {
+		return fmt.Errorf(
+			"%w: PROBER_TARGET_URL must be an absolute http(s) address, got %q",
+			errInvalidConfig, cfg.TargetURL,
+		)
+	}
+
+	// Таймаут шага больше интервала означает, что следующий прогон сценария
+	// начнётся раньше, чем закончится предыдущий.
+	if cfg.Timeout >= cfg.Interval {
+		return fmt.Errorf(
+			"%w: PROBER_TIMEOUT (%s) must be less than PROBER_INTERVAL (%s)",
+			errInvalidConfig, cfg.Timeout, cfg.Interval,
+		)
 	}
 
 	return nil

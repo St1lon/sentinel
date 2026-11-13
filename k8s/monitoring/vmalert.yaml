@@ -1,0 +1,79 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vmalert
+  namespace: monitoring
+spec:
+  selector:
+    app: vmalert
+  ports:
+  - port: 8880
+    targetPort: http
+    name: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vmalert
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vmalert
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: vmalert
+    spec:
+      containers:
+      - image: victoriametrics/vmalert:v1.154.0
+        name: vmalert
+        imagePullPolicy: IfNotPresent
+        args:
+        - -datasource.url=http://vm-single-victoria-metrics-single-server.monitoring.svc.cluster.local:8428
+        - -remoteWrite.url=http://vm-single-victoria-metrics-single-server.monitoring.svc.cluster.local:8428
+        - -remoteRead.url=http://vm-single-victoria-metrics-single-server.monitoring.svc.cluster.local:8428
+        - -rule=/etc/vmalert/rules/*.yaml
+        - -rule=/etc/vmalert/alerts/*.yaml
+        - -evaluationInterval=30s
+        - -notifier.url=http://alertmanager.monitoring.svc.cluster.local:9093
+        - -httpListenAddr=:8880
+        ports:
+        - containerPort: 8880
+          name: http
+        volumeMounts:
+        - name: rules
+          mountPath: /etc/vmalert/rules
+          readOnly: true
+        - name: alerts
+          mountPath: /etc/vmalert/alerts
+          readOnly: true
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 3
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 15
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            memory: 256Mi
+      volumes:
+      - name: rules
+        configMap:
+          name: sli-rules
+      - name: alerts
+        configMap:
+          name: alert-rules

@@ -36,4 +36,10 @@ data:
 
   RETENTION_CHECK_DAYS: "30"
   RETENTION_BATCH_SIZE: "10000"
-...
+
+  PROBER_TARGET_URL: "http://api.sentinel.svc.cluster.local:8080"
+  PROBER_INTERVAL: "10s"
+  PROBER_TIMEOUT: "3s"
+  PROBER_LOGIN_EMAIL: "demo@sentinel.local"
+  PROBER_STATUS_SLUG: ""
+  PROBER_USER_AGENT: "SentinelProber/1.0"

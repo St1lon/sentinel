@@ -80,9 +80,46 @@ type TargetsConfig struct {
 	AllowPrivate bool `env:"ALLOW_PRIVATE_TARGETS" envDefault:"false"`
 }
 
+// ProberConfig — blackbox-пробер: ходит в наше же API снаружи по сценарию
+// критического пользовательского пути и отдаёт результат метриками SLI.
+// Пустой PROBER_STATUS_SLUG отключает шаг публичной страницы: slug выдаётся
+// при регистрации и заранее не известен.
+type ProberConfig struct {
+	TargetURL     string        `env:"PROBER_TARGET_URL,required"     validate:"required,url"`
+	Interval      time.Duration `env:"PROBER_INTERVAL"                envDefault:"10s" validate:"min=1s"`
+	Timeout       time.Duration `env:"PROBER_TIMEOUT"                 envDefault:"3s"  validate:"min=100ms"`
+	LoginEmail    string        `env:"PROBER_LOGIN_EMAIL,required"    validate:"required,email"`
+	LoginPassword string        `env:"PROBER_LOGIN_PASSWORD,required" validate:"required"`
+	StatusSlug    string        `env:"PROBER_STATUS_SLUG"`
+	UserAgent     string        `env:"PROBER_USER_AGENT"              envDefault:"SentinelProber/1.0" validate:"required"`
+}
+
 type RetentionConfig struct {
 	CheckRetentionDays int `env:"RETENTION_CHECK_DAYS" envDefault:"30" validate:"min=1,max=3650"`
 	BatchSize          int `env:"RETENTION_BATCH_SIZE" envDefault:"10000" validate:"min=100,max=1000000"`
+}
+
+// ChaosConfig — управляемая деградация API для демонстрации SLI, SLO и
+// алертов. По умолчанию всё выключено, в production включение запрещено.
+// Сбои вносятся только в /api/, проверки живости не трогаются: иначе
+// kubelet начнёт перезапускать поды, и вместо деградации выйдет падение.
+//
+// GoroutineLeak и MemHogMB — режимы для алертов на метрики рантайма:
+// утечку горутин и рост памяти нельзя вызвать полезной нагрузкой, они
+// имитируются напрямую (спавн горутин и удержание аллокаций на запрос).
+type ChaosConfig struct {
+	ErrorRate     float64       `env:"CHAOS_ERROR_RATE"      envDefault:"0"   validate:"min=0,max=1"`
+	Latency       time.Duration `env:"CHAOS_LATENCY"         envDefault:"0s"  validate:"min=0"`
+	LatencyRate   float64       `env:"CHAOS_LATENCY_RATE"    envDefault:"0"   validate:"min=0,max=1"`
+	ReadyzFail    bool          `env:"CHAOS_READYZ_FAIL"     envDefault:"false"`
+	GoroutineLeak int           `env:"CHAOS_GOROUTINE_LEAK"  envDefault:"0"   validate:"min=0,max=1000"`
+	MemHogMB      int           `env:"CHAOS_MEM_HOG_MB"      envDefault:"0"   validate:"min=0,max=64"`
+}
+
+// Enabled сообщает, нужно ли вообще включать middleware в цепочку.
+func (c *ChaosConfig) Enabled() bool {
+	return c.ErrorRate > 0 || (c.Latency > 0 && c.LatencyRate > 0) || c.ReadyzFail ||
+		c.GoroutineLeak > 0 || c.MemHogMB > 0
 }
 
 type APIConfig struct {
@@ -93,6 +130,7 @@ type APIConfig struct {
 	Auth     AuthConfig
 	Targets  TargetsConfig
 	Metrics  MetricsConfig
+	Chaos    ChaosConfig
 }
 
 type WorkerProcessConfig struct {
@@ -102,6 +140,13 @@ type WorkerProcessConfig struct {
 	Worker   WorkerConfig
 	Targets  TargetsConfig
 	Metrics  MetricsConfig
+}
+
+type ProberProcessConfig struct {
+	App     AppConfig
+	Log     LogConfig
+	Metrics MetricsConfig
+	Prober  ProberConfig
 }
 
 type CleanupConfig struct {
@@ -142,6 +187,10 @@ func LoadAPIConfig(validate *validator.Validate) (*APIConfig, error) {
 		return nil, err
 	}
 
+	if err := checkChaos(&cfg.App, &cfg.Chaos); err != nil {
+		return nil, err
+	}
+
 	return cfg, nil
 }
 
@@ -163,6 +212,19 @@ func LoadWorkerConfig(validate *validator.Validate) (*WorkerProcessConfig, error
 	}
 
 	if err := checkTargets(&cfg.App, &cfg.Targets); err != nil {
+		return nil, err
+	}
+
+	return cfg, nil
+}
+
+func LoadProberConfig(validate *validator.Validate) (*ProberProcessConfig, error) {
+	cfg, err := parse[ProberProcessConfig](validate)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := checkProber(&cfg.Prober); err != nil {
 		return nil, err
 	}
 

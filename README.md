@@ -252,6 +252,72 @@ make monitoring-up     # helm upgrade --install vm-single в namespace monitorin
 make vm-ui             # port-forward, дальше http://localhost:8428/vmui
 ```
 
+## Доступность: SLI, SLO и SLA
+
+Три индикатора считаются на метриках выше. Два request-based — доступность
+API (доля не-5xx на пользовательских маршрутах) и скорость (доля запросов
+быстрее 300 мс), один time-based — живость конвейера проверок (доля минут,
+в которые воркер выполнял проверки). Цели: 99.5 %, 95 % и 99 % на скользящем
+окне 30 дней; SLA для пользователя — 99.0 % доступности за календарный месяц.
+
+Считает их vmalert и пишет готовые ряды обратно в Victoria Metrics, дашборд
+только читает. Request-based индикаторы считаются на трафике blackbox-пробера
+(`cmd/prober`): он раз в 10 секунд проходит сценарий «вход → список мониторов →
+публичная страница» и отдаёт результат каждого шага. Его же gauge «хороших
+минут» закрывает слепую зону request-based подхода: когда api не отвечает,
+запросов нет вовсе и доля ошибок превращается в «нет данных».
+
+```bash
+make prober-up         # образ пробера и деплой в minikube
+make rules-up          # vmalert с recording rules для SLI
+make dashboards-up     # датасорс Victoria Metrics и дашборд Sentinel SLO
+make sli               # метрики пробера с поднятого окружения
+```
+
+Для демонстрации в приложение встроена управляемая деградация (переменные
+`CHAOS_*`, выключена по умолчанию, в production запрещена) и два скрипта:
+
+```bash
+make load                        # фоновая нагрузка на API
+make chaos ARGS="errors 0.3"     # 30 % ответов 503 на /api/
+make chaos ARGS="off"            # вернуть как было
+```
+
+Формулировки, формулы и сценарий демонстрации — в
+[Отчёт-ДЗ5.md](%D0%9E%D1%82%D1%87%D1%91%D1%82-%D0%94%D0%975.md).
+
+## Алерты
+
+vmalert оценивает правила из `k8s/monitoring/alerts.yaml` и отправляет
+срабатывания в Alertmanager, тот группирует и рассылает в receivers. Канал на
+стенде — webhook в `notifier-sink` (`cmd/notifier-sink`): сервис-приёмник,
+печатающий тело уведомления в лог; так отлаживают webhook-интеграции и в
+реальной жизни. Семь правил: пять на симптомах сервиса (доля 5xx, p95
+задержки, выгорание бюджета ошибок мультиоконной парой, остановка конвейера
+проверок, молчание пробера) и два на метриках рантайма Go (`go_goroutines`,
+`process_resident_memory_bytes`) — для Go-приложения это аналог актуатора
+Spring/Python.
+
+```bash
+make alerts-lint       # promtool и amtool проверяют правила без кластера
+make sink-up           # образ и деплой приёмника уведомлений
+make alerts-up         # Alertmanager + правила + связь vmalert с Alertmanager
+make alertmanager-ui   # http://localhost:9093 — список алертов
+make sink-logs         # тела уведомлений: firing и resolved
+```
+
+Доводим до срабатывания той же деградацией плюс двумя ресурсными режимами
+(оба с предохранителями, чтобы под не убило посреди демонстрации):
+
+```bash
+make chaos ARGS="errors 0.3"      # SentinelAPIHighErrorRate, ErrorBudgetBurn
+make chaos ARGS="goroutines 10"   # SentinelGoroutinesHigh: 10 горутин на запрос
+make chaos ARGS="memhog 8"        # SentinelMemoryHigh: 8 MiB на запрос
+make chaos ARGS="off"             # уведомления придут и о восстановлении
+```
+
+Условия, пороги и обоснования — в [Отчёт-ДЗ6.md](%D0%9E%D1%82%D1%87%D1%91%D1%82-%D0%94%D0%976.md).
+
 ## Разработка
 
 ```bash
@@ -287,14 +353,17 @@ go run ./cmd/worker
 
 ```
 api/openapi/           контракт API
-cmd/{api,worker,cleanup}  точки входа трёх процессов
+cmd/{api,worker,cleanup,prober,notifier-sink}
+                       точки входа пяти процессов (sink — приёмник уведомлений)
 docker-compose.yaml    полное окружение: postgres, миграции, api, worker, web
 deployments/           Dockerfile процессов, Dockerfile фронтенда, конфиг nginx
 k8s/                   манифесты для minikube
-  logging/             Victoria Logs и Vector
-  monitoring/          values для чарта Victoria Metrics
+  logging/             Victoria Logs, Vector, Grafana и дашборд SLO
+  monitoring/          values чарта Victoria Metrics, vmalert, правила SLI,
+                       правила алертов, Alertmanager, notifier-sink
 internal/
   app/                 composition root
+  blackbox/            сценарий пробера: критический путь пользователя
   config/              конфигурация из env
   domain/              сущности, ошибки, переходы состояний
   infra/
@@ -307,7 +376,7 @@ internal/
   usecase/             по пакету на сценарий
   worker/              планировщик, пул проверок, срез состояния для метрик
   integrationtests/    тесты против настоящей БД
-scripts/               demo.sh, smoke.sh
+scripts/               demo.sh, smoke.sh, slo-load.sh, chaos.sh, alerts-lint.sh
 web/                   фронтенд без сборки
 ```
 
